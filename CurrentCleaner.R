@@ -57,48 +57,54 @@ processWave = function(wave){
   ratee_count = wave["rateeCount.x"]
   x_ids = unique(wave[["id.x"]])
   x_partners = unique(wave[["partner.x"]])
-  h = hash()
-  g = hash()
+  partnersExcluded = hash()
   for(i in x_ids){
     for(p in x_partners){
-      h[[paste(toString(i), toString(p))]] =  wave[wave["id.x"] == i & wave["partner.x"] != p,]
-      g[[paste(toString(i), toString(p))]] =  wave[wave["id.x"] == i & wave["partner.x"] == p,]
+      partnersExcluded[[paste(toString(i), toString(p))]] =  wave[wave["id.x"] == i & wave["partner.x"] != p,]
     }
   }
   for(i in x_ids){
     decs =  wave[wave["id.x"] == i,][["dec.x"]]
     if(length(unique(decs)) != 1){
-      dec_str = paste("decX", toString(i))
-      cor_str = paste("corX", toString(i))
-      vote_str = paste("RaterX", toString(i))
-      wave[dec_str] = wave[wave["id.x"] == i,][["dec.x"]]
-      wave[cor_str] = 0
-      wave[vote_str] = 0
-      for(j in x_ids){
-        if(i !=j ){
-          for(p in x_partners){
-            slice_i = h[[paste(toString(i), toString(p))]]
-            slice_i_2 = g[[paste(toString(i), toString(p))]]
-            slice_j = h[[paste(toString(j), toString(p))]]
-            c = cor(slice_i[["weightedDec.x"]], slice_j[["weightedDec.x"]])
-            c = ifelse(is.na(c) | c == 0, 0.01, c)
-            wave[wave["id.x"] == j & wave["partner.x"] == p,][[cor_str]] = c
-            wave[wave["id.x"] == j & wave["partner.x"] == p,][[vote_str]] = c*ifelse(slice_i_2[["dec.x"]] == 1, 1, -1)
-          }
-        } 
-      }
+      wave = createOne(wave, i, partnersExcluded)  
     }
   }
-  wave = wave[names(wave[,colSums(wave) != 0])]
-  wave = data.frame(apply(wave,2,f))
-  wave = round(wave, 2)
   return(wave)
 }
-for(i in 1:20){
+createOne = function(wave, i, h, g){
+  x_ids = unique(wave[["id.x"]])
+  x_partners = unique(wave[["partner.x"]])
+  dec_str = paste("decX", toString(i))
+  cor_str = paste("corX", toString(i))
+  vote_str = paste("RaterX", toString(i))
+  sq_vote_str = paste("SqRaterX", toString(i))
+  
+  wave[dec_str] = wave[wave["id.x"] == i,][["dec.x"]]
+  wave[cor_str] = 0
+  wave[vote_str] = 0
+  wave[sq_vote_str] = 0
+  for(j in x_ids){
+    if(i !=j ){
+      for(p in x_partners){
+        slice_i = h[[paste(toString(i), toString(p))]]
+        slice_j = h[[paste(toString(j), toString(p))]]
+        c = cor(slice_i[["dec.x"]], slice_j[["dec.x"]])
+        c = ifelse(is.na(c) | c == 0, 0.01, c)
+        ind = ifelse(wave[wave["id.x"] == i & wave["partner.x"] == p,] == 1, 1, -1)
+        wave[wave["id.x"] == j & wave["partner.x"] == p,][[cor_str]] = c
+        wave[wave["id.x"] == j & wave["partner.x"] == p,][[vote_str]] = c*ind
+        wave[wave["id.x"] == j & wave["partner.x"] == p,][[sq_vote_str]] = abs(c)*c*ind
+      } 
+    }
+  }
+  return(wave)
+}
+
+for(i in 1:3){
   print(i)
   wave = merged[merged["wave"] == i,]
   wave = processWave(wave)
+  wave = round(wave, 3)
   write.csv(wave, paste("~/Desktop/waves/decisions",paste(toString(i),".csv",sep=""),sep=""))    
 }
 
-wave = read.csv(paste("~/Desktop/waves/decisions",paste(toString(4),".csv",sep=""),sep=""))
