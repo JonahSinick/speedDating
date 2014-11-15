@@ -27,4 +27,5 @@ m_fields = fields[grep("_M", fields)]
 w_fields = fields[grep("_W", fields)]
 merged = formCrosses(merged, m_fields, w_fields)
 
+
 write.csv(merged, '~/Desktop/speedDating/mergedCrossFeaturesAdded.csv')
