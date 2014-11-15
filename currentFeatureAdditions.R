@@ -123,8 +123,7 @@ women = new_all[new_all["gender"] == 0,]
 
 
 
-# women_id_joins = c("iid",  "pid", "wave")
-# men_id_joins = c("pid", "iid", "wave")
-# 
-# 
-# merged = merge(women, men, by.x = women_id_joins, by.y = men_id_joins)
+write.csv(men, "~/Desktop/speedDating/menCollaborativelyFiltered.csv")
+write.csv(women, "~/Desktop/speedDating/womenCollaborativelyFiltered.csv")
+
+

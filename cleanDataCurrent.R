@@ -45,7 +45,7 @@ n = names(df)
 colnames(df)[21:37] = gsub("$", "Act" ,n[21:37])
 colnames(df)[grep("1_1", n)] = gsub("1_1", "Pref" ,n[grep("1_1", n)])
 colnames(df)[46:52] = gsub("$", "Rating" ,n[46:52])
-
+/
 #Wave 5 has missing rows
 
 write.csv(df , '~/Desktop/speedDating/cleanedData.csv')
