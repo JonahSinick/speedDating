@@ -2,8 +2,10 @@ merged = read.csv('~/Desktop/speedDating/mergedCrossFeaturesAdded.csv')
 n = names(merged)
 adjusted_acts = n[grep("ActAdj",n)]
 merged = merged[,!(n %in% adjusted_acts)]
-
-
+n = names(merged)
+codes = n[grep("cd_W|cd_M|c_M_|c_W_|_c_M|_c_W",n)]
+merged = merged[,!(n %in% codes)]
+colnames(merged)[9] = c("match")
 
 formTrainAndTest = function(df){
   waves = unique(df[["wave_W"]])

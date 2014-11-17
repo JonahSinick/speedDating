@@ -35,27 +35,6 @@ getProbs = function(train, test, features, tar){
 
 
 
-addProbColsGender = function(genderHash){
-  train = genderHash[["train"]]
-  test = genderHash[["test"]]
-  tars = c("dec_M","dec_W", "match")
-  colNames = genderHash[["colNames"]]
-  menFeatures = genderHash[["featuresMen"]]
-  womenFeatures = genderHash[["featuresWomen"]]
-  matchFeatures = genderHash[["featuresMatch"]]
-  
-  train[[colNames[1]]]  = getProbs(train, train, menFeatures, tars[1])
-  test[[colNames[1]]]  = getProbs(train, test, menFeatures, tars[1])
-  train[[colNames[2]]]  = getProbs(train, train, womenFeatures, tars[2])
-  test[[colNames[2]]]  = getProbs(train, test, womenFeatures, tars[2])
-  train[[colNames[3]]]  = getProbs(train, train, match, tars[3])
-  test[[colNames[3]]]  = getProbs(train, test, match, tars[3])
-  
-  genderHash[["train"]] = train
-  genderHash[["test"]] = test
-  return(genderHash)
-}
-
 
 
 Names = names(myTrain)
@@ -66,6 +45,38 @@ avgRatingNamesMofW = gsub("W_of_M", "M_of_W", avgRatingNamesWofM)
 guessNames = Names[grep("Guess_", Names)]
 womenOfMenGuessNames = guessNames[grep("W_of_M", guessNames)]
 menOfWomenGuessNames = guessNames[grep("M_of_W", guessNames)]
+
+goOutNames = Names[grep("go_out", Names)]
+womenGoOutNames = goOutNames[grep("_W", goOutNames)]
+menGoOutNames = goOutNames[grep("_M", goOutNames)]
+
+dateNames = Names[grep("date", Names)]
+womenDateNames = dateNames[grep("_W", dateNames)]
+menDateNames = goOutNames[grep("_M", date_Names)]
+
+menPhysActNames =c("sports_M", "yoga_M", "hiking_M", "exercise_M")
+menArtActNames =c("art_M", "theater_M", "concerts_M", "moviesAct_M", "museumsAct_M", "music_M", "reading_Act_M")
+menMiscActNames = c("diningAct_M", "diningAct_M", "clubbingAct_M", "shoppingAct_M", "tvsportsAct_M", "gamingAct_M")
+
+womenPhysActNames = gsub("_M", "_W", menPhysActNames)
+womenArtActNames = gsub("_M", "_W", menArtActNames)
+womenMiscActNames = gsub("_M", "_W", womenMiscActNames)
+
+prefNames = Names[grep("Pref", Names)]
+womenPrefNames = prefNames[grep("_W", prefNames)]
+menPrefNames = prefNames[grep("_M", prefNames)]
+
+womenGoalNames = Names[grep("goal", Names)][2:7]
+menGoalNames = Names[grep("goal", Names)][9:14]
+
+menDemoNames = ("imprace_M", "income_M", "imprelig_M", "tuition_M", "age_M", "met_M", "exphappy_M")
+menDemoMiscNames = ("imprace_M", "income_M", "imprelig_M", "tuition_M", "age_M", "met_M")
+womenDemoMiscNames = gsub("_M", "_W", menDemoMiscNames)
+
+womenDateNames = goOutNames[grep("_W", goOutNames)]
+menGoOutNames = goOutNames[grep("_M", goOutNames)]
+menOfWomenGuessNames = guessNames[grep("M_of_W", guessNames)]
+
 
 crossNames = Names[grep("Cross", Names)]
 fieldCrossNames = crossNames[grep("field", crossNames)]
@@ -172,6 +183,7 @@ groupsHash[["careerCrossNamesLawWoman"]] = careerCrossNamesLawWoman
 groupsHash[["careerCrossNamesAcademicWoman"]] = careerCrossNamesAcademicWoman 
 groupsHash[["careerCrossNamesOtherWoman"]] = careerCrossNamesOtherWoman 
 
+groupsHash[["miscMan"]] = careerCrossNamesOtherWoman 
 
 genderHash = hash()
 genderHash[["train"]] = myTrain
@@ -183,46 +195,106 @@ baselineWofM = c("decAvg_W_of_M", "raterDecAvg_W")
 baselineMatch = c(baselineMofW, baselineWofM)
 
 
+addProbColsGender = function(genderHash){
+  train = genderHash[["train"]]
+  test = genderHash[["test"]]
+  tars = c("dec_M","dec_W", "match")
+  colNames = genderHash[["colNames"]]
+  menFeatures = genderHash[["featuresMen"]]
+  womenFeatures = genderHash[["featuresWomen"]]
+  matchFeatures = genderHash[["featuresMatch"]]
+  print(menFeatures)
+  train[[colNames[1]]]  = getProbs(train, train, menFeatures, tars[1])
+  test[[colNames[1]]]  = getProbs(train, test, menFeatures, tars[1])
+  print(womenFeatures)
+  
+  train[[colNames[2]]]  = getProbs(train, train, womenFeatures, tars[2])
+  test[[colNames[2]]]  = getProbs(train, test, womenFeatures, tars[2])
+  print(matchFeatures)
+  
+  train[[colNames[3]]]  = getProbs(train, train, matchFeatures, tars[3])
+  test[[colNames[3]]]  = getProbs(train, test, matchFeatures, tars[3])
+  
+  
+  
+  genderHash[["train"]] = train
+  genderHash[["test"]] = test
+  return(genderHash)
+}
 
-avgRatingNamesMofW = gsub("W_of_M", "M_of_W", avgRatingNamesWofM)
+
+genderHash[["colNames"]] = c("baselineDecM", "baselineDecW", "baselineMatch")
+genderHash[["featuresMen"]] = baselineMofW
+genderHash[["featuresWomen"]] = baselineWofM
+genderHash[["featuresMatch"]] = baselineMatch
+genderHash = addProbColsGender(genderHash)
+
+myTrain = genderHash[["train"]]
+myTest = genderHash[["test"]]
+
+
+myTrain["simpleMatch"] = myTrain["baselineDecM"]*myTrain["baselineDecW"]
+myTest["simpleMatch"] = myTest["baselineDecM"]*myTest["baselineDecW"]
+
+genderHash[["train"]] = myTrain 
+genderHash[["test"]] = myTest
+
+
+genderHash[["colNames"]] = c("baselineDecM", "baselineDecW", "baselineMatch")
+genderHash[["featuresMen"]] = baselineMofW
+genderHash[["featuresWomen"]] = baselineWofM
+genderHash[["featuresMatch"]] = c(baselineMatch, "simpleMatch")
+genderHash = addProbColsGender(genderHash)
+
 
 womenOfMenGuessNames = guessNames[grep("W_of_M", guessNames)]
 womenOfMenRatingsMerged = gsub("Guess", "Merged" ,womenOfMenGuessNames)
 menOfWomenGuessNames = guessNames[grep("M_of_W", guessNames)]
 menOfWomenRatingsMerged = gsub("Guess", "Merged" ,menOfWomenGuessNames)
 
+
 for(i in 1:7){
-  stringWM = paste(womenOfMenRatingsMerged[i],"dec_M",sep="_")
-  stringWW = paste(womenOfMenRatingsMerged[i],"dec_W",sep="_")
-  stringMM = paste(menOfWomenRatingsMerged[i],"dec_M",sep="_")
-  stringMW = paste(menOfWomenRatingsMerged[i],"dec_W",sep="_")
-  genderHash[["colNames"]] = c(stringWM, stringWW)
-  genderHash[["featuresMen"]] = c(groupsHash[["baselineMofW"]], womenOfMenGuessNames[i], avgRatingNamesWofM[i])
-  genderHash[["featuresWomen"]] = c(groupsHash[["baselineWofM"]], womenOfMenGuessNames[i], avgRatingNamesWofM[i])
+  stringWM = paste(womenOfMenRatingsMerged[i],"DecM",sep="_")
+  stringWW = paste(womenOfMenRatingsMerged[i],"DecW",sep="_")
+  stringWmatch = paste(womenOfMenRatingsMerged[i],"Match",sep="_")
+  
+  stringMM = paste(menOfWomenRatingsMerged[i],"DecM",sep="_")
+  stringMW = paste(menOfWomenRatingsMerged[i],"DecW",sep="_")
+  stringMmatch = paste(menOfWomenRatingsMerged[i],"Match",sep="_")
+  genderHash[["colNames"]] = c(stringWM, stringWW, stringMmatch )
+  genderHash[["featuresMen"]] = c("baselineDecW", womenOfMenGuessNames[i], avgRatingNamesWofM[i])
+  genderHash[["featuresWomen"]] = c("baselineDecW", womenOfMenGuessNames[i], avgRatingNamesWofM[i])
+  genderHash[["featuresMatch"]] = c("baselineMatch", womenOfMenGuessNames[i], avgRatingNamesWofM[i])
+  
   genderHash = addProbColsGender(genderHash)
   
-  genderHash[["colNames"]] = c(stringMM, stringMW)
-  genderHash[["featuresMen"]] = c(groupsHash[["baselineMofW"]], menOfWomenGuessNames[i], avgRatingNamesMofW[i])
-  genderHash[["featuresWomen"]] = c(groupsHash[["baselineWofM"]], menOfWomenGuessNames[i], avgRatingNamesMofW[i])
+  genderHash[["colNames"]] = c(stringMM, stringMW, stringMmatch)
+  genderHash[["featuresMen"]] = c("baselineDecM", menOfWomenGuessNames[i], avgRatingNamesMofW[i])
+  genderHash[["featuresWomen"]] = c("baselineDecM", menOfWomenGuessNames[i], avgRatingNamesMofW[i])
+  genderHash[["featuresMatch"]] = c("baselineMatch", menOfWomenGuessNames[i], avgRatingNamesMofW[i])
+  
   genderHash = addProbColsGender(genderHash)
   
 }
+# groupsHash[["womenOfMenRatingsMergedDecM"]] = gsub("$", "_DecM" , womenOfMenRatingsMerged)
+# groupsHash[["womenOfMenRatingsMergedDecW"]] = gsub("$", "_DecW" , womenOfMenRatingsMerged)
+# groupsHash[["womenOfMenRatingsMergedDecW"]] = gsub("$", "_DecW" , womenOfMenRatingsMerged)
+# groupsHash[["menOfWomenRatingsMerged"]] = menOfWomenRatingsMerged
+names(myTrain)
+# groupsHash[["compositeMergedQualityOfW"]] = menOfWomenRatingsMerged
+# groupsHash[["compositeMergedQualityOfM"]] = womenOfMenRatingsMerged
 
+for(colName in keys(groupsHash)){
+  str1 = paste(colName,"decM",sep="_")
+  str2 = paste(colName,"decW",sep="_")
+  str3 = paste(colName,"Match",sep="_")
+  genderHash[["featuresMen"]] = c("baselineDecM", groupsHash[[colName]])
+  genderHash[["featuresWomen"]] = c("baselineDecW", groupsHash[[colName]])
+  genderHash[["featuresMatch"]] = c("baselineMatch", groupsHash[[colName]])
+  genderHash = addProbColsGender(genderHash)
+}
 
-genderHash[["colNames"]] = c("compositeAvgQualityOfW_dec_M", "compositeAvgQualityOf_W_dec_W")
-genderHash[["featuresMen"]] = c(groupsHash[["baselineMofW"]], avgRatingNamesMofW)
-genderHash[["featuresWomen"]] = c(groupsHash[["baselineWofM"]], avgRatingNamesMofW)
-genderHash = addProbColsGender(genderHash)
-
-genderHash[["colNames"]] = c("compositeAvgQualityOfM_dec_M", "compositeAvgQualityOf_M_dec_W")
-genderHash[["featuresMen"]] = c(groupsHash[["baselineMofW"]], avgRatingNamesWofM)
-genderHash[["featuresWomen"]] = c(groupsHash[["baselineWofM"]], avgRatingNamesWofM)
-genderHash = addProbColsGender(genderHash)
-
-
-
-myTrain = genderHash[["train"]]
-myTest = genderHash[["test"]]
+secondGroupsHash = hash()
 
 
 h = function(tar,probs){
@@ -235,97 +307,3 @@ h = function(tar,probs){
   print(c("fracYesFound", fracYesFound))
   return(tab)
 }
-n = names(myTrain)
-mergedRatings = n[grep("mergedRatingWofM",n)]
-mergedRatings = mergedRatings[grep("decW",mergedRatings)]
-
-features = c("mergedRatingWofM_1_decW", "mergedRatingWofM_4_decW", "mergedRatingWofM_7_decW")
-genderHash[["colNames"]] = c("attrLikeFunWofMDecM", "attrLikeFunWofMDecW")
-genderHash[["featuresMen"]] = features
-genderHash[["featuresWomen"]] = features 
-genderHash = addProbColsGender(genderHash)
-
-
-features = c("mergedRatingWofM_2_decW", "mergedRatingWofM_3_decW", "mergedRatingWofM_5_decW")
-genderHash[["colNames"]] = c("sincIntelAmbWofMDecM", "sincIntelAmbWofMDecW")
-genderHash[["featuresMen"]] = features 
-genderHash[["featuresWomen"]] = features 
-genderHash = addProbColsGender(genderHash)
-
-features = c("sincIntelAmbWofMDecW", "attrLikeFunWofMDecW", "mergedRatingWofM_6_decW")
-genderHash[["colNames"]] = c("manQualityDecM", "manQualityDecW")
-genderHash[["featuresMen"]] = features 
-genderHash[["featuresWomen"]] = features 
-genderHash = addProbColsGender(genderHash)
-
-
-myTrain = genderHash[["train"]]
-myTest = genderHash[["test"]]
-
-
-for(i in 1:1){
-  print("NEXT ROUND")
-  features0 = c("decAvg_W_of_M", "raterDecAvg_W")
-  features1 = c("decAvg_W_of_M", "raterDecAvg_W", avgNames[1:7])
-  features2 = c("decAvg_W_of_M", "raterDecAvg_W", guessNames[1:7])
-  features3 = c("decAvg_W_of_M", "raterDecAvg_W", mergedRatings[1:7])
-  features4 = c("decAvg_W_of_M", "raterDecAvg_W", "sincIntelAmbWofMDecW", "attrLikeFunWofMDecW", "mergedRatingWofM_6_decW")
-  features5 = c("decAvg_W_of_M", "raterDecAvg_W", "manQualityDecW")
-  
-
-  
-  
-  genderHash[["colNames"]] = c("decPredWomanComposite0", "decPredWomanComposite0")
-  genderHash[["featuresMen"]] = features0
-  genderHash[["featuresWomen"]] = features0
-  genderHash = addProbColsGender(genderHash)
-  
-  
-
-  
-  genderHash[["colNames"]] = c("decPredWomanComposite1", "decPredWomanComposite1")
-  genderHash[["featuresMen"]] = features1
-  genderHash[["featuresWomen"]] = features1
-  genderHash = addProbColsGender(genderHash)
-  
-  
-  genderHash[["colNames"]] = c("decPredWomanComposite2", "decPredWomanComposite2")
-  genderHash[["featuresMen"]] = features2
-  genderHash[["featuresWomen"]] = features2
-  genderHash = addProbColsGender(genderHash)
-  
-  
-
-  
-  genderHash[["colNames"]] = c("decPredWomanComposite3", "decPredWomanComposite3")
-  genderHash[["featuresMen"]] = features3
-  genderHash[["featuresWomen"]] = features3 
-  genderHash = addProbColsGender(genderHash)
-  
-  
-  
-  print(features4)
-  probs = getProbs(myTrain, myTest, features4, "dec_W")
-  h(myTest[["dec_W"]], probs)
-  
-  
-  genderHash[["colNames"]] = c("decPredWomanComposite4", "decPredWomanComposite4")
-  genderHash[["featuresMen"]] = features4
-  genderHash[["featuresWomen"]] = features4 
-  genderHash = addProbColsGender(genderHash)
-  
-
-  genderHash[["colNames"]] = c("decPredWomanComposite5", "decPredWomanComposite5")
-  genderHash[["featuresMen"]] = features5
-  genderHash[["featuresWomen"]] = features5
-  genderHash = addProbColsGender(genderHash)
-  
-  
-}
-"decPredWomanComposite0", "decPredWomanComposite1", "decPredWomanComposite2", "decPredWomanComposite3", "decPredWomanComposite4", "decPredWomanComposite5", 
-c("decAvg_W_of_M", "raterDecAvg_W"), 
-myTrain = genderHash[["train"]]
-myTest = genderHash[["test"]]
-features =   c(c("decPredWomanComposite5", "decPredWomanComposite0", guessNames, avgNames))
-probs = getProbs(myTrain, myTest, features, "dec_W")
-h(myTest[["dec_W"]], probs)

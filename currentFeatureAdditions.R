@@ -13,7 +13,7 @@ library(scatterplot3d)
 
 all = read.csv('~/Desktop/speedDating/cleanedData.csv')
 
-
+"go_out"
 #Adds binary features for multiple choice questions
 for(str in c("goal", "date", "race", "go_out", "field_cd", "career_c")){
   codes = unique(all[[str]])
@@ -21,6 +21,8 @@ for(str in c("goal", "date", "race", "go_out", "field_cd", "career_c")){
     all[paste(str,toString(code),sep="")] = ifelse(all[[str]] == code, 1, 0)
   }
 }
+
+all = all[, !(names(all) %in% c("race", "field_cd", "career_cd", "goal"))]
 
 colnames(all)[56:61] =   c("goalMeetNew", "goalFunNight", "goalOther", "goalGetDate", "goalSeriousRel", "goalSayDid")
 colnames(all)[69:73] = c("raceAsian", "raceWhite", "rateOther", "raceLatino", "raceBlack")

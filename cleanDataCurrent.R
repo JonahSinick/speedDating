@@ -17,8 +17,10 @@ df = featuresToIntegers(df, c("income", "tuition"))
 
 #drops columns with lots of missing entries and/or that seem inessential
 n = names(df)
-drops = n[grep("7|5|4|_s$|_o$|pf|2_|3_|1_3|1_2|num",n)]
-drops = c(drops, "positin1", "field", "undergra", "from", "zipcode", "career", "you_call", "them_cal", "dat_3", "numdat_3", "num_in_3", "idg", "condtn", "position", "match_es", "date_3", "length", "mn_sat", "satis_2", "round", "int_corr")
+drops = n[grep("7|5|4|_s$|_o$|pf|2_|3_|1_3|1_2|zipcode|from|positin1|undergra|numdat|num_in_3",n)]
+drops = c(drops, "positin1", "field", "undergra", "career", "you_call", "them_cal", "field", "dat_3", 
+          "idg", "condtn", "position", "match_es", "date_3", "length",
+          "mn_sat", "satis_2", "round", "int_corr", "dat", "order")
 
 
 df = df[, !(names(df) %in% drops)]
@@ -42,10 +44,29 @@ df = df[!(df[["wave"]] %in% c(5, 6, 16, 18, 20)),]
 
 n = names(df)
 #Changes activity names for later reference
-colnames(df)[21:37] = gsub("$", "Act" ,n[21:37])
+physActs = c("sports", "yoga", "hiking", "exercise")
+artActs = c("art", "museums", "music", "museums", "reading", "movies", "theater")
+wealthIndicators =  c("income", "tuition", "dining", "shopping")
+miscActs =  c("concerts", "tv", "tvsports", "clubbing", "gaming")
+
+for(phys in physActs){
+  colnames(df)[grep(paste("^",phys,sep=""),colnames(df))] = gsub("$", "PhysAct" ,phys)
+}
+for(art in artActs){
+  colnames(df)[grep(paste("^",art,sep=""),colnames(df))] = gsub("$", "ArtAct" ,art)
+}
+
+for(w in wealthIndicators){
+  colnames(df)[grep(paste("^",w,sep=""),colnames(df))] = gsub("$", "WealthInd" ,w)
+}
+
+for(misc in miscActs){
+  colnames(df)[grep(paste("^",misc,sep=""),colnames(df))] = gsub("$", "MiscAct" ,misc)
+}
+
+colnames(df)[18] = "goOut"
+
 colnames(df)[grep("1_1", n)] = gsub("1_1", "Pref" ,n[grep("1_1", n)])
-colnames(df)[46:52] = gsub("$", "Rating" ,n[46:52])
-/
-#Wave 5 has missing rows
+colnames(df)[46:53] = gsub("$", "Rating" ,n[46:53])
 
 write.csv(df , '~/Desktop/speedDating/cleanedData.csv')
