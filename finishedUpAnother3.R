@@ -54,12 +54,65 @@ addProbColsGender = function(genderHash){
 
 
 Names = names(myTrain)
-guessNames = Names[grep("Guess_", Names)]
-avgNames = Names[grep("Avg", Names)]
-avgNames = c(avgNames[2:8],avgNames[12:18])
-crossNames = Names[grep("Cross", Names)]
-menNames = Names[grep("W_of_M|_M$", Names)]
-womenNames = Names[grep("M_of_W|_W$", Names)]
+
+groupsHash = hash()
+
+
+groupsHash[["avgRatingNamesWofM"]] = Names[grep("Avg", Names)][c(2:8)]
+groupsHash[["avgRatingNamesMofW"]] = gsub("W_of_M", "M_of_W", avgRatingNamesWofM)
+
+groupsHash[["guessNames"]] = Names[grep("Guess_", Names)]
+groupsHash[["womenOfMenGuessNames"]] = guessNames[grep("W_of_M", guessNames)]
+groupsHash[["menOfWomenGuessNames"]] = guessNames[grep("M_of_W", guessNames)]
+
+groupsHash[["crossNames"]] = Names[grep("Cross", Names)]
+groupsHash[["fieldCrossNames"]] = crossNames[grep("field", crossNames)]
+groupsHash[["careerCrossNames"]] = crossNames[grep("career", crossNames)]
+
+groupsHash[["fieldNamesW"]] = Names[grep("field", Names)][1:11]
+groupsHash[["fieldNamesM"]] = Names[grep("field", Names)][12:20]
+groupsHash[["careerNamesW"]] = Names[grep("career", Names)][1:10]
+groupsHash[["careerNamesM"]] = Names[grep("career", Names)][11:17]
+
+groupsHash[["raceNames"]] = Names[grep("race", Names)]
+groupsHash[["menRaces"]] = raceNames[10:13]
+groupsHash[["womenRaces"]] = raceNames[4:7]
+groupsHash[["raceCrossNames"]] = raceNames[grep("Cross", raceNames)]
+
+groupsHash[["asianManRaceCrossNames"]] = raceCrossNames[grep("raceAsian_M", raceCrossNames)]
+groupsHash[["whiteManRaceCrossNames"]] = raceCrossNames[grep("raceWhite_M", raceCrossNames)]
+groupsHash[["latinoManRaceCrossNames"]] = raceCrossNames[grep("raceLatino_M", raceCrossNames)]
+groupsHash[["blackManRaceCrossNames"]] = raceCrossNames[grep("raceBlack_M", raceCrossNames)]
+groupsHash[["asianWomanRaceCrossNames"]] = raceCrossNames[grep("raceAsian_W", raceCrossNames)]
+groupsHash[["whiteWomanRaceCrossNames"]] = raceCrossNames[grep("raceWhite_W", raceCrossNames)]
+groupsHash[["latinoWomanRaceCrossNames"]] = raceCrossNames[grep("raceLatino_W", raceCrossNames)]
+groupsHash[["blackWomanRaceCrossNames"]] = raceCrossNames[grep("raceBlack_W", raceCrossNames)]
+
+groupsHash[["fieldCrossNamesBusinessMan"]] = fieldCrossNames[grep("fieldBusiness_M", fieldCrossNames)]
+groupsHash[["fieldCrossNamesLawMan"]] = fieldCrossNames[grep("fieldLaw_M", fieldCrossNames)]
+groupsHash[["fieldCrossNamesEnginMan"]] = fieldCrossNames[grep("fieldEngin_M", fieldCrossNames)]
+groupsHash[["fieldCrossNamesScienceMan"]] = fieldCrossNames[grep("fieldScience_M", fieldCrossNames)]
+groupsHash[["fieldCrossNamesPoliSciMan"]] = fieldCrossNames[grep("PoliSci_M", fieldCrossNames)]
+
+groupsHash[["fieldCrossNamesBusinessWoman"]] = fieldCrossNames[grep("fieldBusiness_W", fieldCrossNames)]
+groupsHash[["fieldCrossNamesLawWoman"]] = fieldCrossNames[grep("fieldLaw_W", fieldCrossNames)]
+groupsHash[["fieldCrossNamesEnginWoman"]] = fieldCrossNames[grep("fieldEngin_W", fieldCrossNames)]
+groupsHash[["fieldCrossNamesScienceWoman"]] = fieldCrossNames[grep("fieldScience_W", fieldCrossNames)]
+groupsHash[["fieldCrossNamesPoliSciWoman"]] = fieldCrossNames[grep("PoliSci_W", fieldCrossNames)]
+groupsHash[["fieldCrossNamesSocialWorkWoman"]] = fieldCrossNames[grep("SocialWork_W", fieldCrossNames)]
+groupsHash[["fieldCrossNamesOtherWoman"]] = fieldCrossNames[grep("Academia_W|English_W|HistReligPhil_W|SocialSci_W", fieldCrossNames)]
+
+
+careerCrossNamesFinanceMan = careerCrossNames[grep("careerFinance_M", careerCrossNames)]
+careerCrossNamesCreativeMan = careerCrossNames[grep("careerCreative_M", careerCrossNames)]
+careerCrossNamesLawMan = careerCrossNames[grep("careerLaw_M", careerCrossNames)]
+
+careerCrossNamesOtherMan = careerCrossNames[grep("careerMedicine_M|Undecided_M", careerCrossNames)]
+
+careerCrossNamesFinanceMan = careerCrossNames[grep("careerFinance_M", careerCrossNames)]
+careerCrossNamesCreativeMan = careerCrossNames[grep("careerCreative_M", careerCrossNames)]
+careerCrossNamesOtherMan = careerCrossNames[grep("careerMedicine_M|Undecided_M", careerCrossNames)]
+
 
 menDecAvgs = c("decAvg_M_of_W", "raterDecAvg_M") 
 womenDecAvgs = c("decAvg_W_of_M", "raterDecAvg_W") 
@@ -68,8 +121,6 @@ genderHash = hash()
 genderHash[["train"]] = myTrain
 genderHash[["test"]] = myTest
 
-
-# 
 
 for(i in 1:7){
   string = paste("mergedRatingWofM",toString(i),sep="_")
@@ -111,21 +162,6 @@ n = names(myTrain)
 mergedRatings = n[grep("mergedRatingWofM",n)]
 mergedRatings = mergedRatings[grep("decW",mergedRatings)]
 
-for(i in 1:7){
-  print("NEXT ROUND")
-  features1 = c("decAvg_W_of_M", "raterDecAvg_W", avgNames[i])
-  features2 = c("decAvg_W_of_M", "raterDecAvg_W", guessNames[i])
-  features3 = c("decAvg_W_of_M", "raterDecAvg_W", mergedRatings[i])
-  print(avgNames[i])
-  probs = getProbs(myTrain, myTest, features1, "dec_W")
-  h(myTest[["dec_W"]], probs)
-  print(guessNames[i])
-  probs = getProbs(myTrain, myTest, features2, "dec_W")
-  h(myTest[["dec_W"]], probs)
-  print(mergedRatings[i])
-  probs = getProbs(myTrain, myTest, features3, "dec_W")
-  h(myTest[["dec_W"]], probs)
-}
 features = c("mergedRatingWofM_1_decW", "mergedRatingWofM_4_decW", "mergedRatingWofM_7_decW")
 genderHash[["colNames"]] = c("attrLikeFunWofMDecM", "attrLikeFunWofMDecW")
 genderHash[["featuresMen"]] = features
