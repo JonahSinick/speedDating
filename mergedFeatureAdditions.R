@@ -7,15 +7,18 @@ formCrosses = function(df, features1, features2){
     for(f2 in features2){
       p = df[[f1]]*df[[f2]]
       if(sum(p) >= 40){
-        crossed_name = paste(f1,"Cross",sep="_")
+        crossed_name = paste(f1,"Cross",sep="")
         merged[paste(crossed_name,f2,sep="_")] = p
       }
     }
   }
   return(merged)
 }
+races = n[grep("^race", n)]
+menRaces = races[grep("M$"),races] 
+womenRaces = races[grep("W$"),races] 
 
-merged = formCrosses(merged, c("raceAsian_M", "raceWhite_M", "raceLatino_M", "raceBlack_M"), c("raceAsian_W", "raceWhite_W", "raceLatino_W", "raceBlack_W"))
+merged = formCrosses(merged, menRaces, womenRaces)
 
 careers = n[grep("career",n)]
 m_careers = careers[grep("_M", careers)]

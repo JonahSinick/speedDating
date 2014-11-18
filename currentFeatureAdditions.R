@@ -13,7 +13,6 @@ library(scatterplot3d)
 
 all = read.csv('~/Desktop/speedDating/cleanedData.csv')
 
-"go_out"
 #Adds binary features for multiple choice questions
 for(str in c("goal", "date", "race", "go_out", "field_cd", "career_c")){
   codes = unique(all[[str]])
@@ -22,33 +21,24 @@ for(str in c("goal", "date", "race", "go_out", "field_cd", "career_c")){
   }
 }
 
-all = all[, !(names(all) %in% c("race", "field_cd", "career_cd", "goal"))]
+all = all[, !(names(all) %in% c("race", "field_cd", "career_c", "goal"))]
 
-colnames(all)[56:61] =   c("goalMeetNew", "goalFunNight", "goalOther", "goalGetDate", "goalSeriousRel", "goalSayDid")
-colnames(all)[69:73] = c("raceAsian", "raceWhite", "rateOther", "raceLatino", "raceBlack")
-colnames(all)[81:98] = c("fieldLaw", "fieldMath", "fieldPoliSci", "fieldBusiness", "fieldEngin", "fieldAcademia",
+colnames(all)[grep("goal",colnames(all))] =   c("goalMeetNew", "goalFunNight", "goalOther", 
+                                                "goalGetDate", "goalSeriousRel", "goalSayDid")
+colnames(all)[grep("^race",colnames(all))] = c("raceAsian", "raceWhite", "rateOther", "raceLatino", "raceBlack")
+colnames(all)[grep("field",colnames(all))] = c("fieldLaw", "fieldMath", "fieldPoliSci", "fieldBusiness", "fieldEngin", "fieldAcademia",
                          "fieldSocialSci", "fieldSocialWork", "fieldUndecided", "fieldMedicine", "fieldHistReligPhil", "fieldEnglish",
                          "fieldScience", "fieldFilm", "fieldLanguages", "fieldArts", "fieldArch", "fieldOther")
-colnames(all)[99:115] = c("careerCreative", "careerLaw", "careerInternational", "careerAcademic", "careerFinance", "careerUndecided",
-                         "careerEngineer", "careerPsychology", "careerMedicine", "careerSports", "careerSocialWork", "careerRealEstate",
-                         "careerOther", "careerSpeech", "careerArch", "careerPolitics", "careerJourn")
-n = names(all)
+colnames(all)[grep("career",colnames(all))] = c("careerCreative", "careerLaw", "careerInternational", "careerAcademic", "careerFinance",
+                                                "careerUndecided","careerEngineer", "careerPsychology", "careerMedicine", "careerSports", 
+                                                "careerSocialWork", "careerRealEstate","careerOther", "careerSpeech", 
+                                                "careerArch", "careerPolitics", "careerJourn")
 
-
-#produces features for activities according to their *relative* ratings by the person
-activities = n[grep("Act",n)]
-
-all[["activityAvg"]] = rowSums(all[activities])/length(activities)
-adjusted_acts = gsub("$", "Adj", n[grep("Act", n)])
-all[adjusted_acts] = all[activities] - rowSums(all[activities])/length(activities)
-
-
-#adds a feature for each type of rating of the partner, giving the average of the ratings 
 
 addAverages = function(df, ratings){
   n = names(df)
-  sums = gsub("Rating", "Sum", ratings)
-  averages = gsub("$", "Avg", ratings)
+  sums = c(gsub("Rating", "Sum", ratings))
+  averages = gsub("Rating", "AvgRating", ratings)
   df = ddply(df, .(id) ,transform ,raterDecSum = sum(dec))
   df = ddply(df, .(partner) ,transform ,decSum = sum(dec))
   df = ddply(df, .(partner) ,transform ,attrSum = sum(attrRating))
@@ -58,22 +48,24 @@ addAverages = function(df, ratings){
   df = ddply(df, .(partner) ,transform ,ambSum = sum(ambRating))
   df = ddply(df, .(partner) ,transform ,sharSum = sum(sharRating))
   df = ddply(df, .(partner) ,transform ,likeSum = sum(likeRating))
+  df = ddply(df, .(partner) ,transform ,probSum = sum(probRating))
+  
   
   num_ratees = length(unique(df[["partner"]]))
   num_raters = length(unique(df[["id"]]))
   df[averages] = (df[sums] - df[ratings])/(num_raters - 1)
   df["decAvg"] = (df["decSum"] - df["dec"])/(num_raters - 1)
   df["raterDecAvg"] = (df["raterDecSum"] - df["dec"])/(num_ratees - 1)
-  df = df[,!(names(df) %in% sums)]
+  df = df[,!(names(df) %in% c(sums, "decSum", "raterDecSum"))]
   return(df)
 }
-
 
 
 addGuesses = function(df, ratings){
   num_ratees = length(unique(df[["pid"]]))
   num_raters = length(unique(df[["iid"]]))
   for(s in ratings){
+    print(s)
     rating_matrix = t(matrix(df[[s]], nrow = num_ratees, ncol = num_raters))
     guesses = t(matrix(nrow = num_ratees, ncol = num_raters))
     for(i in 1:num_raters){
@@ -86,10 +78,10 @@ addGuesses = function(df, ratings){
         guesses[i, j] = as(recom, "matrix")[i,j]
       }
     }
-    df[[paste(s,"Guess",sep="")]] =  matrix(t(guesses), nrow = num_raters*num_ratees, ncol = 1)[,1]
-    df[[paste(s,"Guess",sep="")]] = ifelse(df[[paste(s,"Guess",sep="")]] > 10, 10, df[[paste(s,"Guess",sep="")]] )
-    df[[paste(s,"Guess",sep="")]] = ifelse(df[[paste(s,"Guess",sep="")]] < 0, 0, df[[paste(s,"Guess",sep="")]] )
-    
+    guessName = gsub("$", "Guess", s)
+    df[[guessName]] =  matrix(t(guesses), nrow = num_raters*num_ratees, ncol = 1)[,1]
+    df[guessName] = ifelse(df[[guessName]] > 10, 10, df[[guessName]] )    
+    df[guessName] = ifelse(df[[guessName]] < 0, 0, df[[guessName]] )
   }
   return(df)
 }
@@ -105,12 +97,11 @@ addRatingFeatures = function(df){
 processWaves = function(df){
   stub = df[0,]
   for(w in unique(df[["wave"]])){
+    print(w)
     slice = df[df["wave"] == w,]
     men = slice[slice["gender"] == 1,]
     women = slice[slice["gender"] == 0,]
-    print(c(w,"men"))
     men = addRatingFeatures(men)
-    print(c(w,"women"))
     women = addRatingFeatures(women)
     slice = rbind(men, women)
     stub = rbind(stub, slice)

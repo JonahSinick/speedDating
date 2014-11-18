@@ -61,7 +61,7 @@ for(w in wealthIndicators){
 }
 
 for(misc in miscActs){
-  colnames(df)[grep(paste("^",misc,sep=""),colnames(df))] = gsub("$", "MiscAct" ,misc)
+  colnames(df)[grep(paste(misc,"$",sep=""),colnames(df))] = gsub("$", "MiscAct" ,misc)
 }
 
 colnames(df)[18] = "goOut"
