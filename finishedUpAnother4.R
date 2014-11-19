@@ -14,7 +14,6 @@ library(Metrics)
 
 myTrain = read.csv('~/Desktop/speedDating/currentTrain.csv')
 myTest = read.csv('~/Desktop/speedDating/currentTest.csv')
-myCV = read.csv('~/Desktop/speedDating/currentCV.csv')
 
 
 myTrainTemp = myTrain
@@ -22,7 +21,7 @@ myTestTemp = myTest
 
 myTrain = myTrain[,colSums(myTrain^2) != 0 & colSums(myTest^2) != 0 & colSums(myCV^2) != 0]
 myTest = myTest[,colSums(myTrainTemp^2) != 0 & colSums(myTest^2) != 0 & colSums(myCV^2) != 0]
-myCV = myCV[,colSums(myTrainTemp^2) != 0 & colSums(myTestTemp^2) != 0 & colSums(myCV^2) != 0]
+
 getProbs = function(train, test, features, tar){
   s=scale(train[features],center=TRUE,scale=TRUE)
   co=heuristicC(s)

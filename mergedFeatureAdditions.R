@@ -1,34 +1,81 @@
 merged = read.csv( '~/Desktop/speedDating/merged.csv')
 n = names(merged)
-n[grep("race", n)]
 
 formCrosses = function(df, features1, features2){
   for(f1 in features1){
     for(f2 in features2){
       p = df[[f1]]*df[[f2]]
       if(sum(p) >= 40){
-        crossed_name = paste(f1,"Cross",sep="")
-        merged[paste(crossed_name,f2,sep="_")] = p
+        crossedName = paste(f1,f2,sep="")
+        df[[crossedName]] = p
       }
     }
   }
-  return(merged)
+  return(df)
 }
-races = n[grep("^race", n)]
-menRaces = races[grep("M$"),races] 
-womenRaces = races[grep("W$"),races] 
 
+races = n[grep("^race", n)]
+
+
+for(name in races){
+  merged[paste(name,"impRaceM",sep="")] = merged[name]*merged["impraceM"]
+}
+for(name in races){
+  merged[paste(name,"impRaceW",sep="")] = merged[name]*merged["impraceW"]
+}
+
+menRaces = races[grep("M$",races)] 
+womenRaces = races[grep("W$",races)] 
 merged = formCrosses(merged, menRaces, womenRaces)
+n = names(merged)
+
+
+for(i in raceCrosses){
+  colnames(merged)[i] = gsub("Mrace","MRace",  names(merged)[i])
+}
+n = names(merged)
+raceCrosses = grep("Mrace", n)
+
+for(name in n[raceCrosses]){
+  merged[paste(name,"impRaceM",sep="")] = merged[name]*merged["impraceM"]
+}
+for(name in n[raceCrosses]){
+  merged[paste(name,"impRaceW",sep="")] = merged[name]*merged["impraceW"]
+}
+
+
+
+n = names(merged)
+
+
 
 careers = n[grep("career",n)]
-m_careers = careers[grep("_M", careers)]
-w_careers = careers[grep("_W", careers)]
-merged = formCrosses(merged, m_careers, w_careers)
+menCareers = careers[grep("M", careers)]
+womenCareers = careers[grep("W", careers)]
+merged = formCrosses(merged, menCareers, womenCareers)
+careerCrosses = grep("Mcareer", n)
 
+for(i in careerCrosses){
+  colnames(merged)[i] = gsub("Mcareer","MCareer",  names(merged)[i])
+}
+
+n = names(merged)
 fields = n[grep("field",n)]
-m_fields = fields[grep("_M", fields)]
-w_fields = fields[grep("_W", fields)]
-merged = formCrosses(merged, m_fields, w_fields)
+menFields = fields[grep("M", fields)]
+womenFields = fields[grep("W", fields)]
+merged = formCrosses(merged, menFields, womenFields)
+
+n = names(merged)
+fieldCrosses = grep("Mfield", n)
+
+
+
+
+for(i in fieldCrosses){
+  colnames(merged)[i] = gsub("Mfield","MField",  names(merged)[i])
+}
+
+
 
 
 write.csv(merged, '~/Desktop/speedDating/mergedCrossFeaturesAdded.csv')

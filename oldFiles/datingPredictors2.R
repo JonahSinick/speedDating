@@ -70,7 +70,7 @@ accuracies = function(){
     }
     n = names(wave)    
     
-    sq_cors = n[grep(c("sq."), n)]    
+    sq_cors = n[grep(c("sq."), n)]
     betterProb = n[grep(c("betterProb."), n)]
     probs = n[grep(c("prob."), n)]
     
