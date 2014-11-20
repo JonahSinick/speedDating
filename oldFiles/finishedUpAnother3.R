@@ -1,0 +1,254 @@
+library(gdata)
+library(ggplot2)
+library(miscTools)
+library(xlsx)
+library(hash)
+library(aod)
+library(randomForest)
+library(LiblineaR)
+library(Matrix)
+library(plyr)
+library(recommenderlab)
+library(scatterplot3d)
+library(Metrics)
+
+myTrain = read.csv('~/Desktop/speedDating/currentTrain.csv')
+myTest = read.csv('~/Desktop/speedDating/currentTest.csv')
+myCV = read.csv('~/Desktop/speedDating/currentCV.csv')
+
+
+myTrainTemp = myTrain
+myTestTemp = myTest
+
+myTrain = myTrain[,colSums(myTrain^2) != 0 & colSums(myTest^2) != 0 & colSums(myCV^2) != 0]
+myTest = myTest[,colSums(myTrainTemp^2) != 0 & colSums(myTest^2) != 0 & colSums(myCV^2) != 0]
+myCV = myCV[,colSums(myTrainTemp^2) != 0 & colSums(myTestTemp^2) != 0 & colSums(myCV^2) != 0]
+getProbs = function(train, test, features, tar){
+  s=scale(train[features],center=TRUE,scale=TRUE)
+  co=heuristicC(s)
+  m=LiblineaR(data=s,labels=factor(train[,tar]),type=0,cost=co,bias=TRUE,verbose=FALSE)
+  s2= scale(test[features],attr(s,"scaled:center"),attr(s,"scaled:scale"))
+  p=predict(m,s2,prob=TRUE)
+  probs = p$probabilities[,"1"]
+  return(probs)
+}
+
+
+
+addProbColsGender = function(genderHash){
+  train = genderHash[["train"]]
+  test = genderHash[["test"]]
+  tars = c("dec_M","dec_W")
+  colNames = genderHash[["colNames"]]
+  menFeatures = genderHash[["featuresMen"]]
+  womenFeatures = genderHash[["featuresWomen"]]
+  train[[colNames[1]]]  = getProbs(train, train, menFeatures, tars[1])
+  test[[colNames[1]]]  = getProbs(train, test, menFeatures, tars[1])
+  train[[colNames[2]]]  = getProbs(train, train, womenFeatures, tars[2])
+  test[[colNames[2]]]  = getProbs(train, test, womenFeatures, tars[2])
+  genderHash[["train"]] = train
+  genderHash[["test"]] = test
+  return(genderHash)
+}
+
+
+
+Names = names(myTrain)
+
+groupsHash = hash()
+
+
+groupsHash[["avgRatingNamesWofM"]] = Names[grep("Avg", Names)][c(2:8)]
+groupsHash[["avgRatingNamesMofW"]] = gsub("W_of_M", "M_of_W", avgRatingNamesWofM)
+
+groupsHash[["guessNames"]] = Names[grep("Guess_", Names)]
+groupsHash[["womenOfMenGuessNames"]] = guessNames[grep("W_of_M", guessNames)]
+groupsHash[["menOfWomenGuessNames"]] = guessNames[grep("M_of_W", guessNames)]
+
+groupsHash[["crossNames"]] = Names[grep("Cross", Names)]
+groupsHash[["fieldCrossNames"]] = crossNames[grep("field", crossNames)]
+groupsHash[["careerCrossNames"]] = crossNames[grep("career", crossNames)]
+
+groupsHash[["fieldNamesW"]] = Names[grep("field", Names)][1:11]
+groupsHash[["fieldNamesM"]] = Names[grep("field", Names)][12:20]
+groupsHash[["careerNamesW"]] = Names[grep("career", Names)][1:10]
+groupsHash[["careerNamesM"]] = Names[grep("career", Names)][11:17]
+
+groupsHash[["raceNames"]] = Names[grep("race", Names)]
+groupsHash[["menRaces"]] = raceNames[10:13]
+groupsHash[["womenRaces"]] = raceNames[4:7]
+groupsHash[["raceCrossNames"]] = raceNames[grep("Cross", raceNames)]
+
+groupsHash[["asianManRaceCrossNames"]] = raceCrossNames[grep("raceAsian_M", raceCrossNames)]
+groupsHash[["whiteManRaceCrossNames"]] = raceCrossNames[grep("raceWhite_M", raceCrossNames)]
+groupsHash[["latinoManRaceCrossNames"]] = raceCrossNames[grep("raceLatino_M", raceCrossNames)]
+groupsHash[["blackManRaceCrossNames"]] = raceCrossNames[grep("raceBlack_M", raceCrossNames)]
+groupsHash[["asianWomanRaceCrossNames"]] = raceCrossNames[grep("raceAsian_W", raceCrossNames)]
+groupsHash[["whiteWomanRaceCrossNames"]] = raceCrossNames[grep("raceWhite_W", raceCrossNames)]
+groupsHash[["latinoWomanRaceCrossNames"]] = raceCrossNames[grep("raceLatino_W", raceCrossNames)]
+groupsHash[["blackWomanRaceCrossNames"]] = raceCrossNames[grep("raceBlack_W", raceCrossNames)]
+
+groupsHash[["fieldCrossNamesBusinessMan"]] = fieldCrossNames[grep("fieldBusiness_M", fieldCrossNames)]
+groupsHash[["fieldCrossNamesLawMan"]] = fieldCrossNames[grep("fieldLaw_M", fieldCrossNames)]
+groupsHash[["fieldCrossNamesEnginMan"]] = fieldCrossNames[grep("fieldEngin_M", fieldCrossNames)]
+groupsHash[["fieldCrossNamesScienceMan"]] = fieldCrossNames[grep("fieldScience_M", fieldCrossNames)]
+groupsHash[["fieldCrossNamesPoliSciMan"]] = fieldCrossNames[grep("PoliSci_M", fieldCrossNames)]
+
+groupsHash[["fieldCrossNamesBusinessWoman"]] = fieldCrossNames[grep("fieldBusiness_W", fieldCrossNames)]
+groupsHash[["fieldCrossNamesLawWoman"]] = fieldCrossNames[grep("fieldLaw_W", fieldCrossNames)]
+groupsHash[["fieldCrossNamesEnginWoman"]] = fieldCrossNames[grep("fieldEngin_W", fieldCrossNames)]
+groupsHash[["fieldCrossNamesScienceWoman"]] = fieldCrossNames[grep("fieldScience_W", fieldCrossNames)]
+groupsHash[["fieldCrossNamesPoliSciWoman"]] = fieldCrossNames[grep("PoliSci_W", fieldCrossNames)]
+groupsHash[["fieldCrossNamesSocialWorkWoman"]] = fieldCrossNames[grep("SocialWork_W", fieldCrossNames)]
+groupsHash[["fieldCrossNamesOtherWoman"]] = fieldCrossNames[grep("Academia_W|English_W|HistReligPhil_W|SocialSci_W", fieldCrossNames)]
+
+
+careerCrossNamesFinanceMan = careerCrossNames[grep("careerFinance_M", careerCrossNames)]
+careerCrossNamesCreativeMan = careerCrossNames[grep("careerCreative_M", careerCrossNames)]
+careerCrossNamesLawMan = careerCrossNames[grep("careerLaw_M", careerCrossNames)]
+
+careerCrossNamesOtherMan = careerCrossNames[grep("careerMedicine_M|Undecided_M", careerCrossNames)]
+
+careerCrossNamesFinanceMan = careerCrossNames[grep("careerFinance_M", careerCrossNames)]
+careerCrossNamesCreativeMan = careerCrossNames[grep("careerCreative_M", careerCrossNames)]
+careerCrossNamesOtherMan = careerCrossNames[grep("careerMedicine_M|Undecided_M", careerCrossNames)]
+
+
+menDecAvgs = c("decAvg_M_of_W", "raterDecAvg_M") 
+womenDecAvgs = c("decAvg_W_of_M", "raterDecAvg_W") 
+
+genderHash = hash()
+genderHash[["train"]] = myTrain
+genderHash[["test"]] = myTest
+
+
+for(i in 1:7){
+  string = paste("mergedRatingWofM",toString(i),sep="_")
+  stringM = paste(string,"decM",sep="_")
+  stringW = paste(string,"decW",sep="_")
+  genderHash[["colNames"]] = c(stringM, stringW)
+  genderHash[["featuresMen"]] = c(guessNames[i], avgNames[i])
+  genderHash[["featuresWomen"]] = c(guessNames[i], avgNames[i])
+  genderHash = addProbColsGender(genderHash)
+}
+
+for(i in 7:14){
+  string = paste("mergedRatingMofW",toString(i),sep="_")
+  stringM = paste(string,"decM",sep="_")
+  stringW = paste(string,"decW",sep="_")
+  genderHash[["colNames"]] = c(stringM, stringW)
+  genderHash[["featuresMen"]] = c(guessNames[i], avgNames[i])
+  genderHash[["featuresWomen"]] = c(guessNames[i], avgNames[i])
+  genderHash = addProbColsGender(genderHash)
+}
+
+
+
+myTrain = genderHash[["train"]]
+myTest = genderHash[["test"]]
+
+
+h = function(tar,probs){
+  tab = table(ifelse(probs > 0.5, 1, 0),tar)
+  logloss = round(logLoss(tar, probs),2)
+  print(c("logLoss:", logloss))
+  totalError = round((tab[2,1] + tab[1,2])/length(tar), 2)
+  print(c("totalError:", totalError))
+  fracYesFound = round(tab[2,2]/(tab[1,2] + tab[2,2]), 2)
+  print(c("fracYesFound", fracYesFound))
+  return(tab)
+}
+n = names(myTrain)
+mergedRatings = n[grep("mergedRatingWofM",n)]
+mergedRatings = mergedRatings[grep("decW",mergedRatings)]
+
+features = c("mergedRatingWofM_1_decW", "mergedRatingWofM_4_decW", "mergedRatingWofM_7_decW")
+genderHash[["colNames"]] = c("attrLikeFunWofMDecM", "attrLikeFunWofMDecW")
+genderHash[["featuresMen"]] = features
+genderHash[["featuresWomen"]] = features 
+genderHash = addProbColsGender(genderHash)
+
+
+features = c("mergedRatingWofM_2_decW", "mergedRatingWofM_3_decW", "mergedRatingWofM_5_decW")
+genderHash[["colNames"]] = c("sincIntelAmbWofMDecM", "sincIntelAmbWofMDecW")
+genderHash[["featuresMen"]] = features 
+genderHash[["featuresWomen"]] = features 
+genderHash = addProbColsGender(genderHash)
+
+features = c("sincIntelAmbWofMDecW", "attrLikeFunWofMDecW", "mergedRatingWofM_6_decW")
+genderHash[["colNames"]] = c("manQualityDecM", "manQualityDecW")
+genderHash[["featuresMen"]] = features 
+genderHash[["featuresWomen"]] = features 
+genderHash = addProbColsGender(genderHash)
+
+
+myTrain = genderHash[["train"]]
+myTest = genderHash[["test"]]
+
+
+for(i in 1:1){
+  print("NEXT ROUND")
+  features0 = c("decAvg_W_of_M", "raterDecAvg_W")
+  features1 = c("decAvg_W_of_M", "raterDecAvg_W", avgNames[1:7])
+  features2 = c("decAvg_W_of_M", "raterDecAvg_W", guessNames[1:7])
+  features3 = c("decAvg_W_of_M", "raterDecAvg_W", mergedRatings[1:7])
+  features4 = c("decAvg_W_of_M", "raterDecAvg_W", "sincIntelAmbWofMDecW", "attrLikeFunWofMDecW", "mergedRatingWofM_6_decW")
+  features5 = c("decAvg_W_of_M", "raterDecAvg_W", "manQualityDecW")
+  
+
+  
+  
+  genderHash[["colNames"]] = c("decPredWomanComposite0", "decPredWomanComposite0")
+  genderHash[["featuresMen"]] = features0
+  genderHash[["featuresWomen"]] = features0
+  genderHash = addProbColsGender(genderHash)
+  
+  
+
+  
+  genderHash[["colNames"]] = c("decPredWomanComposite1", "decPredWomanComposite1")
+  genderHash[["featuresMen"]] = features1
+  genderHash[["featuresWomen"]] = features1
+  genderHash = addProbColsGender(genderHash)
+  
+  
+  genderHash[["colNames"]] = c("decPredWomanComposite2", "decPredWomanComposite2")
+  genderHash[["featuresMen"]] = features2
+  genderHash[["featuresWomen"]] = features2
+  genderHash = addProbColsGender(genderHash)
+  
+  
+
+  
+  genderHash[["colNames"]] = c("decPredWomanComposite3", "decPredWomanComposite3")
+  genderHash[["featuresMen"]] = features3
+  genderHash[["featuresWomen"]] = features3 
+  genderHash = addProbColsGender(genderHash)
+  
+  
+  
+  print(features4)
+  probs = getProbs(myTrain, myTest, features4, "dec_W")
+  h(myTest[["dec_W"]], probs)
+  
+  
+  genderHash[["colNames"]] = c("decPredWomanComposite4", "decPredWomanComposite4")
+  genderHash[["featuresMen"]] = features4
+  genderHash[["featuresWomen"]] = features4 
+  genderHash = addProbColsGender(genderHash)
+  
+
+  genderHash[["colNames"]] = c("decPredWomanComposite5", "decPredWomanComposite5")
+  genderHash[["featuresMen"]] = features5
+  genderHash[["featuresWomen"]] = features5
+  genderHash = addProbColsGender(genderHash)
+  
+  
+}
+"decPredWomanComposite0", "decPredWomanComposite1", "decPredWomanComposite2", "decPredWomanComposite3", "decPredWomanComposite4", "decPredWomanComposite5", 
+c("decAvg_W_of_M", "raterDecAvg_W"), 
+myTrain = genderHash[["train"]]
+myTest = genderHash[["test"]]
+features =   c(c("decPredWomanComposite5", "decPredWomanComposite0", guessNames, avgNames))
+probs = getProbs(myTrain, myTest, features, "dec_W")
+h(myTest[["dec_W"]], probs)
