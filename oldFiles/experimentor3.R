@@ -1,269 +1,214 @@
-library(gdata)
-library(ggplot2)
-library(miscTools)
-library(xlsx)
-library(hash)
-library(aod)
-library(randomForest)
-library(LiblineaR)
-library(Matrix)
-library(plyr)
-library(recommenderlab)
-library(scatterplot3d)
-# df = read.csv( '~/Desktop/speedDating/speedDatingData.csv')
-
-merged = read.csv( '~/Desktop/speedDating/dataMerged.csv')
-n = names(merged)
-
-women_acts = n[25:41]
-women_prefs = n[44:49]
-women_beliefs_about_opp_sex = n[50:55]
-women_self_perceptions = n[56:59]
-women_ratings_of_men = n[61:68]
-women_goals = n[70:75]
-women_date = n[76:82]
-women_race = n[83:87]
-women_go_out = n[88:94]
-women_fields = n[95:112]
-women_careers = n[113:129]
-women_acts_adj = n[133:148]
-men_acts = n[241:257]
-men_prefs = n[254:259]
-men_beliefs_about_opp_sex = n[260:265]
-men_self_perceptions = n[266:269]
-men_ratings_of_women = n[271:278]
-men_goals = n[280:285]
-men_date = n[286:292]
-men_race = n[293:297]
-men_go_out = n[298:304]
-men_fields = n[305:322]
-men_careers = n[323:339]
-men_acts_adj = n[349:364]
-
-
-
-# men_avg_ratee_ratings = n[grep("RateeAvgExc.y", n)]
-# men_avg_rater_ratings = n[grep("RaterAvgExc.y", n)]
-# women_avg_ratee_ratings = n[grep("RateeAvgExc.x", n)]
-# men_avg_rater_ratings = n[grep("RaterAvgExc.x", n)]
-# women_adj_rater_ratings = n[grep("RaterAdj.x", n)]
-# women_adj_ratee_ratings = n[grep("RateeAdj.x", n)]
-# men_adj_rater_ratings = n[grep("RaterAdj.y", n)]
-# men_adj_ratee_ratings = n[grep("RateeAdj.y", n)]
-
-stripped = merged
-n = names(stripped)
-careers = n[grep("career",n)]
-goals = n[grep("goal", n)][14:16]
-dates = n[grep("date", n)]
-go_outs = n[grep("go_out", n)]
-races = n[grep("race", n)]
-races = races[c(1,3:9, 11:16)]
-fields = n[grep("field", n)]
-fields = fields[c(c(2:15),c(17:28))]
-careers = careers[c(c(2:13),c(16:25))]
-attributes = c(careers, races)
-
-men_attributes = attributes[grep(".y", attributes)]
-women_attributes = attributes[grep(".x", attributes)]
-for(name in men_attributes){
-  for(name2 in women_attributes){
-    stripped[paste(name,name2,sep="_")] = stripped[name]*stripped[name2]
-  }
-}
-n = names(stripped)
-n = c(n[grep("career",n)], n[grep("race",n)])
-
-w_avg = 0.375
-m_avg = 0.484
-
-# for(name in n){
-#   slice = stripped[stripped[name] == 1,]
-#   frac = sum(slice[["dec.x"]])/nrow(slice)    
-#   if(nrow(slice) > 100 & abs(frac - w_avg) > 0.05){
-#     print(name)
-#     print(nrow(slice))
-#     print(frac)    
-#   }
-# }
-
-men_matrix = matrix(nrow = 4, ncol = 4)
-women_matrix = matrix(nrow = 4, ncol = 4)
-match_matrix = matrix(nrow = 4, ncol = 4)
-frac_matrix = matrix(nrow = 4, ncol = 4)
-anchor = 4.5
-name = "sinc"
-for(i in 1:4){
-  for(j in 1:4){
-    print(c(i,j))
-    slice = merged[merged[paste(name, "RateeAvgExc.x", sep="")] < (anchor + i) &  merged[paste(name, "RateeAvgExc.x", sep="")] > (anchor + i - 1),]
-    slice2 = slice[slice[paste(name, "RateeAvgExc.y", sep="")] < (anchor + j) &  slice[paste(name, "RateeAvgExc.y", sep="")] > (anchor +  j - 1),]
-    frac_woman = mean(slice2[["dec.x"]])
-    frac_man = mean(slice2[["dec.y"]])
-    frac_match = mean(slice2[["match.x"]])
-    frac_matrix[i, j] = round(nrow(slice2)/nrow(merged), 2)
-    men_matrix[i, j] = round(100*frac_man, 0)
-    women_matrix[i, j] = round(100*frac_woman, 0)
-    match_matrix[i, j] = round(100*frac_match, 0)
-  }
-}
-
-
-slice = merged[merged[paste(name, "RateeAvgExc.x", sep="")] < anchor + 2*i &  merged[paste(name, "RateeAvgExc.x", sep="")] > anchor + 2*(i -1),]
-slice2 = slice[slice[paste(name, "RateeAvgExc.y", sep="")] < anchor + 2*j &  slice[paste(name, "RateeAvgExc.y", sep="")] > anchor + 2*(j - 1),]
-frac_woman = mean(slice2[["dec.x"]])
-frac_man = mean(slice2[["dec.y"]])
-frac_match = mean(slice2[["match.x"]])
-frac_matrix[i, j] = round(nrow(slice2)/nrow(merged), 2)
-men_matrix[i, j] = round(100*frac_man, 0)
-women_matrix[i, j] = round(100*frac_woman, 0)
-match_matrix[i, j] = round(100*frac_match, 0)
+                                                  logLoss overallErrorRate yesGuessErrorRate noGuessErrorRate
+2621                                               0.0000           0.0000            0.0000           0.0000
+careersWomanProbDecM                               0.6723           0.4281            0.4779           0.4007
+careersManProbDecM                                 0.6869           0.4383            0.4054           0.4393
+datesWomanProbDecM                                 0.6883           0.4556            0.5238           0.4332
+datesManProbDecM                                   0.6828           0.4321            0.4312           0.4321
+fieldsWomanProbDecM                                0.6781           0.4171            0.4346           0.4126
+fieldsManProbDecM                                  0.7014           0.4211            0.4674           0.3961
+goalsWomanProbDecM                                 0.6819           0.4509            0.5073           0.3979
+goalsManProbDecM                                   0.6764           0.4242            0.2093           0.4317
+racesWomanProbDecM                                 0.6760           0.4321            0.4885           0.3726
+racesManProbDecM                                   0.7009           0.4627            0.5296           0.4314
+careersCrossProbTraitDecMProbDecM                  0.5237           0.2553            0.2719           0.2436
+careersCrossProbDecWProbDecM                       0.5254           0.2569            0.2729           0.2457
+careersCrossProbMatchProbDecM                      0.5236           0.2561            0.2741           0.2433
+careerCreativeM_careerAcademicWCrossProbDecM       0.5238           0.2553            0.2719           0.2436
+careerLawM_careerCreativeWCrossProbDecM            0.5237           0.2553            0.2719           0.2436
+careerLawM_careerAcademicWCrossProbDecM            0.5244           0.2553            0.2719           0.2436
+careerAcademicM_careerInternationalWCrossProbDecM  0.5238           0.2584            0.2774           0.2450
+careerAcademicM_careerAcademicWCrossProbDecM       0.5232           0.2537            0.2717           0.2409
+careerAcademicM_careerFinanceWCrossProbDecM        0.5246           0.2569            0.2763           0.2429
+careerAcademicM_careerMedicineWCrossProbDecM       0.5259           0.2561            0.2732           0.2440
+careerFinanceM_careerCreativeWCrossProbDecM        0.5236           0.2553            0.2761           0.2402
+careerFinanceM_careerLawWCrossProbDecM             0.5236           0.2553            0.2719           0.2436
+careerFinanceM_careerInternationalWCrossProbDecM   0.5243           0.2529            0.2703           0.2406
+careerFinanceM_careerAcademicWCrossProbDecM        0.5237           0.2569            0.2746           0.2443
+careerFinanceM_careerFinanceWCrossProbDecM         0.5236           0.2553            0.2719           0.2436
+careerFinanceM_careerUndecidedWCrossProbDecM       0.5232           0.2561            0.2732           0.2440
+careerFinanceM_careerPsychologyWCrossProbDecM      0.5238           0.2553            0.2719           0.2436
+careerFinanceM_careerMedicineWCrossProbDecM        0.5267           0.2639            0.2827           0.2507
+datesCrossProbTraitDecMProbDecM                    0.5235           0.2553            0.2719           0.2436
+datesCrossProbDecWProbDecM                         0.5235           0.2561            0.2732           0.2440
+datesCrossProbMatchProbDecM                        0.5234           0.2577            0.2768           0.2439
+date7M_date7WCrossProbDecM                         0.5259           0.2561            0.2689           0.2474
+date7M_date5WCrossProbDecM                         0.5236           0.2553            0.2719           0.2436
+date7M_date4WCrossProbDecM                         0.5234           0.2553            0.2719           0.2436
+date7M_date6WCrossProbDecM                         0.5236           0.2577            0.2743           0.2460
+date5M_date7WCrossProbDecM                         0.5236           0.2553            0.2719           0.2436
+date5M_date5WCrossProbDecM                         0.5238           0.2569            0.2755           0.2436
+date5M_date4WCrossProbDecM                         0.5238           0.2553            0.2719           0.2436
+date5M_date6WCrossProbDecM                         0.5218           0.2561            0.2724           0.2447
+date3M_date7WCrossProbDecM                         0.5236           0.2553            0.2719           0.2436
+date3M_date5WCrossProbDecM                         0.5236           0.2561            0.2732           0.2440
+date3M_date4WCrossProbDecM                         0.5273           0.2577            0.2785           0.2425
+date3M_date6WCrossProbDecM                         0.5236           0.2553            0.2719           0.2436
+date4M_date7WCrossProbDecM                         0.5236           0.2545            0.2713           0.2426
+date4M_date5WCrossProbDecM                         0.5246           0.2569            0.2729           0.2457
+date4M_date3WCrossProbDecM                         0.5234           0.2545            0.2713           0.2426
+date4M_date4WCrossProbDecM                         0.5234           0.2577            0.2751           0.2453
+date4M_date6WCrossProbDecM                         0.5235           0.2584            0.2757           0.2463
+date6M_date7WCrossProbDecM                         0.5236           0.2553            0.2719           0.2436
+date6M_date5WCrossProbDecM                         0.5236           0.2553            0.2719           0.2436
+date6M_date3WCrossProbDecM                         0.5236           0.2545            0.2713           0.2426
+date6M_date4WCrossProbDecM                         0.5236           0.2545            0.2713           0.2426
+date6M_date6WCrossProbDecM                         0.5242           0.2569            0.2755           0.2436
+fieldsCrossProbTraitDecMProbDecM                   0.5235           0.2569            0.2746           0.2443
+fieldsCrossProbDecWProbDecM                        0.5239           0.2569            0.2746           0.2443
+fieldsCrossProbMatchProbDecM                       0.5238           0.2561            0.2741           0.2433
+fieldLawM_fieldLawWCrossProbDecM                   0.5237           0.2553            0.2719           0.2436
+fieldLawM_fieldSocialWorkWCrossProbDecM            0.5237           0.2577            0.2743           0.2460
+fieldBusinessM_fieldLawWCrossProbDecM              0.5235           0.2545            0.2731           0.2412
+fieldBusinessM_fieldPoliSciWCrossProbDecM          0.5235           0.2561            0.2715           0.2453
+fieldBusinessM_fieldBusinessWCrossProbDecM         0.5241           0.2561            0.2724           0.2447
+fieldBusinessM_fieldAcademiaWCrossProbDecM         0.5244           0.2561            0.2732           0.2440
+fieldBusinessM_fieldSocialSciWCrossProbDecM        0.5236           0.2537            0.2700           0.2423
+fieldBusinessM_fieldSocialWorkWCrossProbDecM       0.5240           0.2553            0.2727           0.2430
+fieldBusinessM_fieldEnglishWCrossProbDecM          0.5233           0.2569            0.2763           0.2429
+fieldBusinessM_fieldScienceWCrossProbDecM          0.5242           0.2592            0.2787           0.2453
+fieldEnginM_fieldAcademiaWCrossProbDecM            0.5261           0.2553            0.2701           0.2450
+fieldEnginM_fieldSocialSciWCrossProbDecM           0.5249           0.2608            0.2772           0.2493
+fieldEnginM_fieldSocialWorkWCrossProbDecM          0.5237           0.2561            0.2724           0.2447
+fieldScienceM_fieldPoliSciWCrossProbDecM           0.5237           0.2553            0.2719           0.2436
+fieldScienceM_fieldBusinessWCrossProbDecM          0.5236           0.2561            0.2741           0.2433
+fieldScienceM_fieldScienceWCrossProbDecM           0.5236           0.2553            0.2719           0.2436
+goalsCrossProbTraitDecMProbDecM                    0.5237           0.2600            0.2724           0.2516
+goalsCrossProbDecWProbDecM                         0.5243           0.2584            0.2686           0.2516
+goalsCrossProbMatchProbDecM                        0.5234           0.2537            0.2743           0.2388
+goalMeetNewM_goalMeetNewWCrossProbDecM             0.5232           0.2584            0.2765           0.2456
+goalMeetNewM_goalFunNightWCrossProbDecM            0.5236           0.2545            0.2722           0.2419
+goalMeetNewM_goalGetDateWCrossProbDecM             0.5236           0.2553            0.2719           0.2436
+goalMeetNewM_goalSayDidWCrossProbDecM              0.5235           0.2537            0.2717           0.2409
+goalFunNightM_goalMeetNewWCrossProbDecM            0.5258           0.2632            0.2754           0.2549
+goalFunNightM_goalFunNightWCrossProbDecM           0.5247           0.2584            0.2748           0.2470
+goalFunNightM_goalOtherWCrossProbDecM              0.5239           0.2561            0.2715           0.2453
+goalFunNightM_goalGetDateWCrossProbDecM            0.5236           0.2553            0.2719           0.2436
+goalFunNightM_goalSayDidWCrossProbDecM             0.5247           0.2553            0.2692           0.2457
+goalOtherM_goalMeetNewWCrossProbDecM               0.5237           0.2553            0.2727           0.2430
+goalOtherM_goalFunNightWCrossProbDecM              0.5237           0.2545            0.2705           0.2433
+goalGetDateM_goalMeetNewWCrossProbDecM             0.5236           0.2577            0.2699           0.2493
+goalGetDateM_goalFunNightWCrossProbDecM            0.5233           0.2553            0.2719           0.2436
+goalSeriousRelM_goalMeetNewWCrossProbDecM          0.5234           0.2584            0.2774           0.2450
+goalSayDidM_goalMeetNewWCrossProbDecM              0.5237           0.2561            0.2724           0.2447
+goalSayDidM_goalFunNightWCrossProbDecM             0.5236           0.2553            0.2710           0.2443
+racesCrossProbTraitDecMProbDecM                    0.5237           0.2553            0.2719           0.2436
+racesCrossProbDecWProbDecM                         0.5236           0.2553            0.2719           0.2436
+racesCrossProbMatchProbDecM                        0.5236           0.2553            0.2719           0.2436
+raceAsianM_raceAsianWCrossProbDecM                 0.5237           0.2561            0.2732           0.2440
+raceAsianM_raceWhiteWCrossProbDecM                 0.5235           0.2537            0.2708           0.2416
+raceAsianM_raceLatinoWCrossProbDecM                0.5239           0.2561            0.2732           0.2440
+raceWhiteM_raceAsianWCrossProbDecM                 0.5241           0.2553            0.2727           0.2430
+raceWhiteM_raceWhiteWCrossProbDecM                 0.5233           0.2561            0.2732           0.2440
+raceWhiteM_raceLatinoWCrossProbDecM                0.5247           0.2529            0.2712           0.2399
+raceWhiteM_raceBlackWCrossProbDecM                 0.5246           0.2584            0.2774           0.2450
+raceLatinoM_raceWhiteWCrossProbDecM                0.5242           0.2553            0.2701           0.2450
+raceBlackM_raceWhiteWCrossProbDecM                 0.5240           0.2553            0.2736           0.2423
+> 
 
 
 
-merged["CompositeRateeAvgExc.y"] = merged["attrRateeAvgExc.y"] + merged["likeRateeAvgExc.y"] + merged["funRateeAvgExc.y"]
-merged["CompositeRateeAvgExc.x"] = merged["attrRateeAvgExc.x"] + merged["likeRateeAvgExc.x"] + merged["funRateeAvgExc.x"]
-n = names(merged)
-cor(merged[n[grep("RateeAvgExc.x", n)]], merged[n[grep("RateeAvgExc.x", n)]])
-m = median(merged[["CompositeRateeAvgExc.y"]])
-m2 = median(merged[["CompositeRateeAvgExc.x"]])
-
-for(name in c("Composite", "dec", "attr", "fun", "like", "prob", "sinc", "intel")){
-  name1 = paste(name,"RateeAvgExc.y", sep="")
-  name2 = paste(name,"RateeAvgExc.x", sep="")
-  m = median(merged[[name1]])
-  m2 = median(merged[[name2]])
-  name3 = paste(name,"ManHighWomanHigh",sep="")
-  name4 = paste(name,"ManHighWomanLow",sep="")
-  name5 = paste(name,"ManLowWomanHigh",sep="")
-  name6 = paste(name,"ManLowWomanLow",sep="")
-  merged[name3] = ifelse(merged[[name1]] > m & merged[[name2]] > m2, 1, 0 )
-  merged[name4] = ifelse(merged[[name1]] < m & merged[[name2]] > m2, 1, 0 )
-  merged[name5] = ifelse(merged[[name1]] > m & merged[[name2]] < m2, 1, 0 )
-  merged[name6] = ifelse(merged[[name1]] < m & merged[[name2]] < m2, 1, 0 )
-}
-
-
-for(i in 1:4){
-  print(i)
-  print(mean(h[[toString(i)]][["dec.x"]]))
-  print(mean(h[[toString(i)]][["dec.y"]]))
-  print(mean(h[[toString(i)]][["match.x"]]))
-}
-
-f = function(df, features,tar){
-  df = df[sample(1:nrow(df)),]
-  cutoff = nrow(df)/2
-  train = df[1:cutoff,]
-  test = df[(cutoff + 1):nrow(df),]
-  target = factor(train[,tar])
-  s=scale(train[features],center=TRUE,scale=TRUE)
-  co=heuristicC(s)
-  m=LiblineaR(data=s,labels=target,type=0,cost=co,bias=TRUE,verbose=FALSE)
-  s2= scale(test[features],attr(s,"scaled:center"),attr(s,"scaled:scale"))
-  p=predict(m,s2)
-  t = table(p$predictions, test[[tar]])
-  print(t)
-  print((t[1,2] + t[2,1])/nrow(test))
-}
-
-
-merged["WhiteManAsianWoman"] = ifelse(merged[["race.2.y"]] == 1 & merged[["race.4.x"]] == 1, 1, 0)
-merged["AsianManAsianWoman"] = ifelse(merged[["race.4.y"]] == 1 & merged[["race.4.x"]] == 1, 1, 0)
-merged["AsianManWhiteWoman"] = ifelse(merged[["race.4.y"]] == 1 & merged[["race.2.x"]] == 1, 1, 0)
-merged["WhiteManWhiteWoman"] = ifelse(merged[["race.2.y"]] == 1 & merged[["race.2.x"]] == 1, 1, 0)
-merged["OtherManWhiteWoman"] = ifelse(merged[["race.2.y"]] != 1 & merged[["race.2.x"]] == 1, 1, 0)
-merged["crossedRateeYeses"] = merged["decRateeAvgExc.x"]*merged["decRateeAvgExc.y"]
-merged["crossedRaterYeses"] = merged["decRaterAvgExc.x"]*merged["decRaterAvgExc.y"]
-races = names(merged)[473:477]
-merged["decRateeAvgExc.y"] = merged["decRateeAvgExc.y"] + 0.01
-merged["decRateeAvgExc.x"] = merged["decRateeAvgExc.x"] + 0.01
-merged["decDifference"] =  merged["decRateeAvgExc.x"] - merged["decRateeAvgExc.y"]
-merged["decLogQuotient"] =  log(merged["decRateeAvgExc.x"]/merged["decRateeAvgExc.y"])
-merged["attrDifference"] =  merged["attrRateeAvgExc.x"] - merged["attrRateeAvgExc.y"]
-merged["attrLogQuotient"] =  log(merged["attrRateeAvgExc.x"]/merged["attrRateeAvgExc.y"])
-merged["intelDifference"] =  merged["intelRateeAvgExc.x"] - merged["intelRateeAvgExc.y"]
-merged["intelLogQuotient"] =  log(merged["intelRateeAvgExc.x"]/merged["intelRateeAvgExc.y"])
-merged["sincDifference"] =  merged["sincRateeAvgExc.x"] - merged["sincRateeAvgExc.y"]
-merged["sincLogQuotient"] =  log(merged["sincRateeAvgExc.x"]/merged["sincRateeAvgExc.y"])
-merged["funDifference"] =  merged["funRateeAvgExc.x"] - merged["funRateeAvgExc.y"]
-merged["funLogQuotient"] =  log(merged["funRateeAvgExc.x"]/merged["funRateeAvgExc.y"])
-
-for(i in 1:17){
-  print(i)
-  name1 = women_acts_adj[i]
-  name2 = men_acts_adj[i]
-  merged[paste(name1, name2, sep="_")] = merged[name1]*merged[name2]
-}
-woman_career = n[grep("career_c", n)][2:18]
-man_career = n[grep("career_c", n)][20:36]
-for(i in 1:17){
-  for(j in 1:17){
-    if(sum(merged[[woman_career[i]]]*merged[[man_career[j]]]) >=50) {
-      merged[paste(woman_career[i],man_career[j],sep="")] = merged[woman_career[i]]*merged[man_career[j]]  
-    }
-  }
-}
-
-merged2 = merged[,colSums(merged)^2 != 0]
-features = names(merged)[506:527]
-f(merged, features, "dec.x")
-# n = names(merged)
-# prefs = n[grep("1_1", n)]
-# x_prefs = prefs[grep(".x", prefs)]
-# y_prefs = prefs[grep(".y", prefs)]
-# for(pref in prefs){
-#   m = median(merged[[pref]])
-#   merged[pref] = merged[pref] - m
-#   merged[paste(pref,"High",sep="")] = ifelse(merged[[pref]] > 0, 1,0)
-# }
-# 
-# x_prefs_new = names(merged)[506:511]
-# y_prefs_new = names(merged)[512:517]
-# 
-# for(k in length(y_prefs_new)){
-#   x_pref_new = x_prefs_new[6]
-#   y_pref_new = y_prefs_new[6]
-#   merged[paste(x_pref_new,"BothHigh",sep="")] = merged[x_pref_new]*merged[y_pref_new]
-# }
-n = names(merged)
-careers = n[grep("career_c", n)]
-careers_x = careers[grep(".x",careers)][1:16]
-careers_y = careers[grep(".y",careers)][1:16]
-
-
-career_inters = names(merged)[506:527]
-features = c(careers_x, careers_y, career_inters)
-merged = merged[sample(nrow(merged)),]
-train = merged[seq(1, 5*nrow(merged)/10),] 
-test = merged[seq(5*nrow(merged)/10 +  1, nrow(merged)),] 
-rf_fit <- randomForest(y=as.factor(train[,"dec.x"]), x=train[features], importance=TRUE, ntree=500)
-t =  table(predict(rf_fit, test) == test[["dec.x"]])
-print(t[[1]]/nrow(test))
-
-seq = c()
-h = hash()
-slice1 = merged
-slice1["noise"] =  sample(c(-2, -1, 0, 1,2), nrow(slice1), replace = TRUE)
-
-# for(i in unique(slice1[["iid"]])){
-#   h[[toString(i)]] = slice1[slice1["iid"] ==i,]
-# }
-for(j in 1:517){
-  for(i in unique(slice1[["iid"]])){
-    slice = h[[toString(i)]]
-    seq[i] = cor(slice[[j]], slice[["match.x"]])
-  }  
-  alpha = na.omit(seq)
-  if(length(alpha) > 0){
-    beta = round(10*alpha,0)
-    beta = beta - median(beta)
-    t = table(abs(beta) > 2)
-    gamma = 1 - t[[1]]/(length(beta))
-    if(gamma < 0.35){
-      print(names(slice)[j])
-      print(gamma)
-    }
-  }
-}
-
+                                                  logLoss overallErrorRate yesGuessErrorRate noGuessErrorRate
+2621                                               0.0000           0.0000            0.0000           0.0000
+careersWomanProbDecM                               0.6723           0.4281            0.4779           0.4007
+careersManProbDecM                                 0.6869           0.4383            0.4054           0.4393
+datesWomanProbDecM                                 0.6883           0.4556            0.5238           0.4332
+datesManProbDecM                                   0.6828           0.4321            0.4312           0.4321
+fieldsWomanProbDecM                                0.6781           0.4171            0.4346           0.4126
+fieldsManProbDecM                                  0.7014           0.4211            0.4674           0.3961
+goalsWomanProbDecM                                 0.6819           0.4509            0.5073           0.3979
+goalsManProbDecM                                   0.6764           0.4242            0.2093           0.4317
+racesWomanProbDecM                                 0.6760           0.4321            0.4885           0.3726
+racesManProbDecM                                   0.7009           0.4627            0.5296           0.4314
+careersCrossProbTraitDecMProbDecM                  0.5269           0.2600            0.2825           0.2435
+careersCrossProbDecWProbDecM                       0.5282           0.2679            0.2949           0.2476
+careersCrossProbMatchProbDecM                      0.5279           0.2671            0.2943           0.2466
+careerCreativeM_careerAcademicWCrossProbDecM       0.5281           0.2702            0.2965           0.2507
+careerLawM_careerCreativeWCrossProbDecM            0.5282           0.2694            0.2960           0.2497
+careerLawM_careerAcademicWCrossProbDecM            0.5284           0.2702            0.2972           0.2500
+careerAcademicM_careerInternationalWCrossProbDecM  0.5285           0.2726            0.3011           0.2510
+careerAcademicM_careerAcademicWCrossProbDecM       0.5275           0.2710            0.2993           0.2497
+careerAcademicM_careerFinanceWCrossProbDecM        0.5285           0.2671            0.2943           0.2466
+careerAcademicM_careerMedicineWCrossProbDecM       0.5302           0.2702            0.2995           0.2479
+careerFinanceM_careerCreativeWCrossProbDecM        0.5276           0.2687            0.2976           0.2465
+careerFinanceM_careerLawWCrossProbDecM             0.5281           0.2687            0.2954           0.2486
+careerFinanceM_careerInternationalWCrossProbDecM   0.5285           0.2702            0.2965           0.2507
+careerFinanceM_careerAcademicWCrossProbDecM        0.5281           0.2647            0.2927           0.2434
+careerFinanceM_careerFinanceWCrossProbDecM         0.5273           0.2694            0.2967           0.2490
+careerFinanceM_careerUndecidedWCrossProbDecM       0.5270           0.2639            0.2914           0.2431
+careerFinanceM_careerPsychologyWCrossProbDecM      0.5279           0.2647            0.2927           0.2434
+careerFinanceM_careerMedicineWCrossProbDecM        0.5310           0.2718            0.2976           0.2527
+datesCrossProbTraitDecMProbDecM                    0.5264           0.2647            0.2889           0.2469
+datesCrossProbDecWProbDecM                         0.5281           0.2671            0.2943           0.2466
+datesCrossProbMatchProbDecM                        0.5270           0.2616            0.2891           0.2407
+date7M_date7WCrossProbDecM                         0.5299           0.2632            0.2830           0.2490
+date7M_date5WCrossProbDecM                         0.5281           0.2671            0.2943           0.2466
+date7M_date4WCrossProbDecM                         0.5281           0.2694            0.2960           0.2497
+date7M_date6WCrossProbDecM                         0.5280           0.2632            0.2901           0.2428
+date5M_date7WCrossProbDecM                         0.5281           0.2632            0.2901           0.2428
+date5M_date5WCrossProbDecM                         0.5285           0.2647            0.2927           0.2434
+date5M_date4WCrossProbDecM                         0.5281           0.2694            0.2960           0.2497
+date5M_date6WCrossProbDecM                         0.5267           0.2694            0.2967           0.2490
+date3M_date7WCrossProbDecM                         0.5282           0.2639            0.2907           0.2438
+date3M_date5WCrossProbDecM                         0.5279           0.2710            0.2978           0.2510
+date3M_date4WCrossProbDecM                         0.5319           0.2726            0.3032           0.2490
+date3M_date6WCrossProbDecM                         0.5282           0.2671            0.2943           0.2466
+date4M_date7WCrossProbDecM                         0.5281           0.2694            0.2960           0.2497
+date4M_date5WCrossProbDecM                         0.5285           0.2687            0.2954           0.2486
+date4M_date3WCrossProbDecM                         0.5275           0.2694            0.2960           0.2497
+date4M_date4WCrossProbDecM                         0.5279           0.2647            0.2927           0.2434
+date4M_date6WCrossProbDecM                         0.5281           0.2647            0.2927           0.2434
+date6M_date7WCrossProbDecM                         0.5281           0.2687            0.2954           0.2486
+date6M_date5WCrossProbDecM                         0.5281           0.2702            0.2965           0.2507
+date6M_date3WCrossProbDecM                         0.5280           0.2694            0.2960           0.2497
+date6M_date4WCrossProbDecM                         0.5280           0.2694            0.2960           0.2497
+date6M_date6WCrossProbDecM                         0.5285           0.2671            0.2928           0.2479
+fieldsCrossProbTraitDecMProbDecM                   0.5244           0.2632            0.2854           0.2469
+fieldsCrossProbDecWProbDecM                        0.5282           0.2694            0.2960           0.2497
+fieldsCrossProbMatchProbDecM                       0.5265           0.2671            0.2936           0.2473
+fieldLawM_fieldLawWCrossProbDecM                   0.5280           0.2687            0.2954           0.2486
+fieldLawM_fieldSocialWorkWCrossProbDecM            0.5278           0.2671            0.2943           0.2466
+fieldBusinessM_fieldLawWCrossProbDecM              0.5281           0.2655            0.2933           0.2445
+fieldBusinessM_fieldPoliSciWCrossProbDecM          0.5281           0.2639            0.2914           0.2431
+fieldBusinessM_fieldBusinessWCrossProbDecM         0.5278           0.2702            0.2980           0.2493
+fieldBusinessM_fieldAcademiaWCrossProbDecM         0.5278           0.2647            0.2927           0.2434
+fieldBusinessM_fieldSocialSciWCrossProbDecM        0.5282           0.2647            0.2927           0.2434
+fieldBusinessM_fieldSocialWorkWCrossProbDecM       0.5283           0.2694            0.2960           0.2497
+fieldBusinessM_fieldEnglishWCrossProbDecM          0.5280           0.2679            0.2964           0.2462
+fieldBusinessM_fieldScienceWCrossProbDecM          0.5282           0.2694            0.2960           0.2497
+fieldEnginM_fieldAcademiaWCrossProbDecM            0.5311           0.2663            0.2915           0.2476
+fieldEnginM_fieldSocialSciWCrossProbDecM           0.5278           0.2710            0.2985           0.2503
+fieldEnginM_fieldSocialWorkWCrossProbDecM          0.5281           0.2671            0.2936           0.2473
+fieldScienceM_fieldPoliSciWCrossProbDecM           0.5281           0.2702            0.2965           0.2507
+fieldScienceM_fieldBusinessWCrossProbDecM          0.5282           0.2671            0.2943           0.2466
+fieldScienceM_fieldScienceWCrossProbDecM           0.5282           0.2694            0.2967           0.2490
+goalsCrossProbTraitDecMProbDecM                    0.5262           0.2718            0.2938           0.2561
+goalsCrossProbDecWProbDecM                         0.5277           0.2632            0.2846           0.2476
+goalsCrossProbMatchProbDecM                        0.5281           0.2616            0.2929           0.2370
+goalMeetNewM_goalMeetNewWCrossProbDecM             0.5275           0.2679            0.2941           0.2483
+goalMeetNewM_goalFunNightWCrossProbDecM            0.5281           0.2687            0.2954           0.2486
+goalMeetNewM_goalGetDateWCrossProbDecM             0.5279           0.2647            0.2927           0.2434
+goalMeetNewM_goalSayDidWCrossProbDecM              0.5278           0.2687            0.2969           0.2472
+goalFunNightM_goalMeetNewWCrossProbDecM            0.5294           0.2663            0.2868           0.2517
+goalFunNightM_goalFunNightWCrossProbDecM           0.5288           0.2734            0.3038           0.2500
+goalFunNightM_goalOtherWCrossProbDecM              0.5281           0.2702            0.2965           0.2507
+goalFunNightM_goalGetDateWCrossProbDecM            0.5282           0.2702            0.2965           0.2507
+goalFunNightM_goalSayDidWCrossProbDecM             0.5291           0.2663            0.2900           0.2490
+goalOtherM_goalMeetNewWCrossProbDecM               0.5281           0.2702            0.2965           0.2507
+goalOtherM_goalFunNightWCrossProbDecM              0.5282           0.2702            0.2965           0.2507
+goalGetDateM_goalMeetNewWCrossProbDecM             0.5271           0.2616            0.2860           0.2435
+goalGetDateM_goalFunNightWCrossProbDecM            0.5278           0.2687            0.2954           0.2486
+goalSeriousRelM_goalMeetNewWCrossProbDecM          0.5279           0.2702            0.2972           0.2500
+goalSayDidM_goalMeetNewWCrossProbDecM              0.5281           0.2671            0.2943           0.2466
+goalSayDidM_goalFunNightWCrossProbDecM             0.5282           0.2702            0.2965           0.2507
+racesCrossProbTraitDecMProbDecM                    0.5278           0.2671            0.2943           0.2466
+racesCrossProbDecWProbDecM                         0.5285           0.2679            0.2956           0.2469
+racesCrossProbMatchProbDecM                        0.5282           0.2671            0.2943           0.2466
+raceAsianM_raceAsianWCrossProbDecM                 0.5294           0.2639            0.2907           0.2438
+raceAsianM_raceWhiteWCrossProbDecM                 0.5283           0.2687            0.2954           0.2486
+raceAsianM_raceLatinoWCrossProbDecM                0.5287           0.2694            0.2974           0.2483
+raceWhiteM_raceAsianWCrossProbDecM                 0.5284           0.2694            0.2960           0.2497
+raceWhiteM_raceWhiteWCrossProbDecM                 0.5280           0.2694            0.2960           0.2497
+raceWhiteM_raceLatinoWCrossProbDecM                0.5298           0.2702            0.3009           0.2465
+raceWhiteM_raceBlackWCrossProbDecM                 0.5292           0.2647            0.2927           0.2434
+raceLatinoM_raceWhiteWCrossProbDecM                0.5284           0.2639            0.2907           0.2438
+raceBlackM_raceWhiteWCrossProbDecM                 0.5282           0.2671            0.2943           0.2466

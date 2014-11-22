@@ -56,7 +56,8 @@ getProbs = function(train, test, features, tar, tryCosts){
   }
   return(probs)
 }
-tryCosts= 10^(c(-4, -3, -2, -1, 0,1,2,3))
+
+
 
 
 newWomenTraits = womanTraitsDecW[c(1,2,4)]
