@@ -80,8 +80,11 @@ for(i in waves){
 }
 for(i in waves){
   for(j in waves){
-    string = paste(paste("RFTest",toString(i),sep="_"),toString(j),sep="_")
-    slice = merged[merged[["wave"]]%in% c(i,j),]
+    if(i !=j){
+      string = paste(paste("RFTest",toString(i),sep="_"),toString(j),sep="_")
+      slice = merged[merged[["wave"]]%in% c(i,j),]
+      print(accuracyFrame(slice[c("decW",string)],"decW"))  
+    }
   }
 }
 accuracyFrame(finalSlice[c("decW", "baselineDecW","bestGuessDecW")], "decW")

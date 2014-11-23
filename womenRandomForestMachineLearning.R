@@ -25,14 +25,6 @@ wealthInds = n[grep("WealthInd",n)]
 menTraits = n[grep("M$",n)][3:98]
 menTraits = menTraits[c(9:26,28:57,59:70,72:96)]
 womenTraits = gsub("M$", "W", menTraits)
-waves = unique(merged[["wave"]])
-waves1 = merged[merged[["wave"]] %in% waves[c(1,4,7,10,13,16)],]
-waves2 = merged[merged[["wave"]] %in% waves[c(2,5,8,11,14)],]
-waves3 = merged[merged[["wave"]] %in% waves[c(3,6,9,12,15)],]
-
-
-
-
 menAvgRatings = menTraits[grep("AvgRating", menTraits)]
 womenAvgRatings = gsub("M$", "W", menAvgRatings)
 menGuessRatings = menTraits[grep("RatingGuess", menTraits)]
