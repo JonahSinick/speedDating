@@ -35,57 +35,52 @@ menPrefs = menTraits[grep("Pref", menTraits)]
 womenPrefs = gsub("M$", "W", gsub("M$", "W", menPrefs))
 ratingsDecW = c(menAvgRatings, menGuessRatings, womenAvgRatings, womenGuessRatings)
 
+baselineDecM = c("raterDecAvgM", "decAvgW","avgWaveDecM")
 
-merged[c("RFTempProbsDecW","RFProbsDecW", "RFPredictionsDecW")] = 0
-features = c(ratingsDecW, menActs, womenActs, womenPrefs, menPrefs, wealthInds, "impraceW", "impreligW",
-             "dateW", "dateM", "exphappyW", "goOutM", "goOutW")
-mergedForWomen = merged[c("wave", "decW", features)]
-merged[testProbsColName] = 0
+# features = c(ratingsDecW, menActs, womenActs, womenPrefs, menPrefs, wealthInds, "impraceW", "impreligW",
+#              "dateW", "dateM", "exphappyW", "goOutM", "goOutW")
+
+baselineDecW = c(womenPrefs, menPrefs)
+
+features = C("decAvgM")
+mergedSlice = merged[c("decW","wave", features)]
 waves = unique(merged[["wave"]])
-for(i in 1:length(waves)){
-  for(j in (i + 1):length(waves)){
-    waveStr = paste(toString(waves[i]),toString(waves[j]),sep="_")
-    print(waveStr)
-    trainWaves = waves[!(waves %in% waves[c(i,j)])]
-    testWaves = waves[(waves %in% waves[c(i,j)])]
-    testProbsColName = paste("RFTest",waveStr,sep="_")
-    merged[testProbsColName] = 0
-    tempTrain = mergedForWomen[mergedForWomen[["wave"]] %in% trainWaves,]
-    tempTest = mergedForWomen[(mergedForWomen[["wave"]] %in% testWaves),]
-    rfForTrain = randomForest(y=as.factor(tempTrain[,"decW"]), x=tempTrain[features], importance=TRUE, ntree=500)
-    merged[merged[["wave"]] %in% testWaves,][[testProbsColName]] = predict(rfForTrain, tempTest, type="prob")[,"1"]
-  }
-}
-
-for(i in 1:length(waves)){
-  for(j in 1:length(waves)){
-    if(j < i){
-      waveStr1 = paste(toString(waves[j]),toString(waves[i]),sep="_")
-      waveStr2 = paste(toString(waves[i]),toString(waves[j]),sep="_")
-      oldColName = paste("RFTest",waveStr1,sep="_")
-      newColName = paste("RFTest",waveStr2,sep="_")
-      merged[newColName] = merged[oldColName]
-    }
-  }
-}
-
-
-merged["RFProbsDecW"] = 1
 for(i in waves){
-  for(j in waves){
-    if(j != i){
-      print(c(i,j))
-      waveStr = paste(toString(i),toString(j),sep="_")
-      colName =  paste("RFTest",waveStr,sep="_")
-      merged[[colName]] = ifelse(merged[[colName]] == 0, 0.01, merged[[colName]])
-      merged[[colName]] = ifelse(merged[[colName]] == 1, 0.99, merged[[colName]])
-      merged[merged["wave"] == i,][["RFProbsDecW"]]  = merged[merged["wave"] == i,][["RFProbsDecW"]]*(merged[merged["wave"] == i,][[colName]]/(1 - merged[merged["wave"] == i,][[colName]]))
-    }
+  test = mergedSlice[mergedSlice["wave"] == i,]
+  
+  train = mergedSlice[mergedSlice["wave"] != i,]
+  test["voteSum"] = 0
+  num = 1
+  newWaves = waves[waves != i]
+  errorSum = 0
+  errors = c()
+  for(j in 1:5){
+    print(c(i,j))
+    predictions_j = paste("predictions",toString(j),sep=" ")
+    trainIdxs = sample(newWaves,3)
+    trueTrain = train[train[["wave"]] %in% trainIdxs,]
+    yeses = sum(train[["decW"]])
+    nos  = nrow(train) - yeses
+    rf = randomForest(y=as.factor(trueTrain[,"decW"]), x=trueTrain[features], importance=TRUE,classwt =c(nos,yeses), ntree=500)
+    test[predictions_j] =  predict(rf, test, type="prob")[,"1"]
+    test[[predictions_j]] = ifelse(test[[predictions_j]] == 0, 0.01, test[[predictions_j]])
+    test[[predictions_j]] = ifelse(test[[predictions_j]] == 1, 0.99, test[[predictions_j]])
+    test[["voteSum"]] = test[["voteSum"]] + test[[predictions_j]]
+    test[[predictions_j]] =  ifelse(test[[predictions_j]] > 0.5,1,0)
+    t = table(test[[predictions_j]],test[["decW"]])    
+    error = 1 - (t[1,1] + t[2,2])/nrow(test)
+    errors[j] = error
+    errorSum = errorSum + error
+    test[["predictions"]] = ifelse((test[["voteSum"]]/j)  > 0.5,1,0)
+    t = table(test[["predictions"]],test[["decW"]])
+    betterError = 1 - (t[1,1] + t[2,2])/nrow(test)
   }
+  print(rf)
+  cat("Wave Number: ", toString(i), " Number of rows: ", nrow(test), "\n", sep="")
+  cat("Wave Number: ", toString(i), " Percent Yes: ", mean(test[["decW"]]), "\n", sep="")  
+  cat("Wave Number: ", toString(i), " Average Error: ", round(100*errorSum/num), "\n", sep="")
+  cat("Wave Number: ", toString(i), " Median Error: ", round(100*median(errors)), "\n", sep="")
+  cat("Wave Number: ", toString(i), " Better Error: ", round(100*betterError), "\n", sep="")
+  cat("\n", sep="")
+  
 }
-merged["RFProbsDecW"] = (merged["RFProbsDecW"])^(1/(length(waves) - 1))
-merged["RFProbsDecW"] = (merged["RFProbsDecW"])/(merged["RFProbsDecW"] + 1)
-
-
-       
-write.csv(merged, '~/Desktop/speedDating/mergedRFProbsDecWAdded.csv')

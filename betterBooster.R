@@ -1,0 +1,20 @@
+library(gdata)
+library(ggplot2)
+library(miscTools)
+library(xlsx)
+library(hash)
+library(aod)
+library(randomForest)
+library(LiblineaR)
+library(Matrix)
+library(plyr)
+library(recommenderlab)
+library(scatterplot3d)
+library(Metrics)
+
+
+merged = read.csv( '~/Desktop/speedDating/mergedCrossFeaturesAdded.csv')
+
+betterBooster = function(df, features, tar){
+  
+}

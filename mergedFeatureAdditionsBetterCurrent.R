@@ -149,7 +149,7 @@ makeCrossesAndFreqs = function(df, crossHash){
     print(key)
     colNames = c(paste(key,"WomanProbDecM",sep=""), paste(key,"WomanProbDecW",sep=""), paste(key,"WomanProbMatch",sep=""),
                  c(paste(key,"ManProbDecM",sep=""), paste(key,"ManProbDecW",sep=""), paste(key,"ManProbMatch",sep="")),
-                   paste(key,"CrossProbTraitDecM",sep=""), paste(key,"CrossProbDecW",sep=""), paste(key,"CrossProbMatch",sep=""))
+                   paste(key,"CrossProbDecM",sep=""), paste(key,"CrossProbDecW",sep=""), paste(key,"CrossProbMatch",sep=""))
                  df[colNames] = df[c("decAvgW", "raterDecAvgW", "matchAvgW",
                                      "decAvgM", "raterDecAvgM", "matchAvgM",
                                      "avgDecMPair","avgDecWPair" , "avgMatchPair" )]
@@ -200,7 +200,7 @@ crossHash[["dates"]] = n[grep("date",n)][c(2:8, 10:16)]
 
 merged = makeCrossesAndFreqs(merged,crossHash)
 n = names(merged)
-badCols = n[colSums(merged) <= 30]
+badCols = n[colSums(merged) <= 120]
 badMenCols = badCols[grep("M$",badCols)]
 badWomenCols = badCols[grep("W$",badCols)]
 badMenColsWomen = gsub("M$", "W", badMenCols)
