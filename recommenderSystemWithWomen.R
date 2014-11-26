@@ -257,3 +257,6 @@ lines(womanOnlyAvgs, type="o", col="red")
 lines(calMatchAvgs, type="o", col="green")
 legend(4.2, 43, c("Baseline","Women prefs only", "Composite"), cex=0.8, 
        col=c("blue","red", "green"), pch=21:23, lty=1:3);
+
+
+
