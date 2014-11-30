@@ -14,20 +14,14 @@ library(Metrics)
 
 
 merged = read.csv( '~/Desktop/speedDating/mergedProbsAddedFinal.csv')
-newWaves = unique(merged[["wave"]])
-for(w in newWaves){
-  slice = merged[merged["wave"] == w,]
-  print(w)
-  print(mean(slice[["match"]]))
-}
 df = read.csv('~/Desktop/speedDating/speedDatingData.csv')
 
 waves = c(7, 9, 11, 12, 19, 21, 4)
 
-merged = merged[merged[["wave"]] %in% waves,c("wave", "iidM", "iidW", "match", "matchGuess")]
+merged = merged[merged[["wave"]] %in% waves,c("wave", "iidM", "iidW", "match", "genericConjProbCal" , "matchGuess")]
 df = df[df[["wave"]] %in% waves & df["gender"] == 0, c("wave", "iid", "pid", "order")]
 
-merged[c("order", "betterOrder", "oldOrderQuart", "betterOrderQuart")] = 0
+merged[c("order", "betterOrder")] = 0
 
 for(i in 1:nrow(merged)){
   iidM = merged[i,"iidM"]
@@ -106,8 +100,8 @@ scorer = function(df, waveOrderSplit, signRow, signCol, maxOrMin, frac){
   }
 }
 
-processWave = function(wave, waveOrderSplit, signRow, signCol, maxOrMin, frac){
-  sorted = wave[order(-wave["matchGuess"]),]
+processWave = function(wave, waveOrderSplit, signRow, signCol, maxOrMin, frac, probType){
+  sorted = wave[order(-wave[probType]),]
   orderFrame = data.frame()
   for(iidW in unique(sorted[["iidW"]])){
     orderFrame[toString(iidW),] = 0
@@ -159,7 +153,7 @@ processWave = function(wave, waveOrderSplit, signRow, signCol, maxOrMin, frac){
   sliceOld = wave[wave["order"] <= floor(numPeople/waveOrderSplit),]
   sliceNew = wave[wave["betterOrder"] <= floor(numPeople/waveOrderSplit) & wave["betterOrder"] > 0,]
   wave["oldNum"] = sum(sliceOld[["match"]])
-  wave["expNum"] = sum(sliceNew[["matchGuess"]])
+  wave["expNum"] = sum(sliceNew[[probType]])
   wave["num"] = sum(sliceNew[["match"]])
   wave[c("oldNumM", "oldNumW", "expNumM", "expNumW", "numM", "numW")] = 0
   wave["sliceOldSize"] = nrow(sliceOld)
@@ -172,66 +166,80 @@ processWave = function(wave, waveOrderSplit, signRow, signCol, maxOrMin, frac){
   }
   for(iidM in unique(sliceNew[["iidM"]])){
     wave[wave["iidM"] == iidM,][["numM"]] = sum(sliceNew[sliceNew["iidM"] == iidM,][["match"]])
-    wave[wave["iidM"] == iidM,][["expNumM"]] = sum(sliceNew[sliceNew["iidM"] == iidM,][["matchGuess"]])
+    wave[wave["iidM"] == iidM,][["expNumM"]] = sum(sliceNew[sliceNew["iidM"] == iidM,][[probType]])
   }
   for(iidW in unique(sliceNew[["iidW"]])){
     wave[wave["iidW"] == iidW,][["numW"]] = sum(sliceNew[sliceNew["iidW"] == iidW,][["match"]])
-    wave[wave["iidW"] == iidW,][["expNumW"]] = sum(sliceNew[sliceNew["iidW"] == iidW,][["matchGuess"]])
+    wave[wave["iidW"] == iidW,][["expNumW"]] = sum(sliceNew[sliceNew["iidW"] == iidW,][[probType]])
   }
+  wave["oldNumComb"] = wave["oldNumM"] + wave["oldNumW"]
+  wave["numComb"] = wave["numM"] + wave["numW"]
+  
   return(wave)
 }
-orderedWave = merged[merged["wave"] == 19,]
-printMetricsNew = function(x, waves, split, type){
+printMetricsNew = function(merged, x, waves, split, type, pType){
   expNum = 0
   expNumMen = 0
   expNumWomen = 0
+  expNumPeople = 0
+  
   for(w in waves){
-    newWave = processWave(wave=merged[merged["wave"] == w,], waveOrderSplit = split, signRow = -1, signCol = -1, maxOrMin = type, frac = x)
+    newWave = processWave(wave=merged[merged["wave"] == w,], waveOrderSplit = split, signRow = -1, signCol = -1, maxOrMin = type, frac = x, probType =  pType)
     len = length(unique(newWave[["iidM"]]))
     expNum = expNum + newWave[["expNum"]][1]
     happyMen = length(unique(newWave[newWave["expNumM"] >= 1,][["iidM"]]))
     happyWomen = length(unique(newWave[newWave["expNumW"] >= 1,][["iidW"]]))
     expNumMen = expNumMen +  happyMen
     expNumWomen = expNumWomen + happyWomen
+    expNumPeople = expNumMen + expNumWomen
   }  
-  return(c(expNum,expNumMen,expNumWomen))
+  return(c(expNum,expNumMen,expNumWomen, expNumPeople))
 }
-newDF = data.frame()
-for(wave in waves){
-  newDF[toString(wave),] = 0
-}
-newDF[c("expNum", "expNumMen", "expNumWomen", "bestNumFrac", "bestMenFrac", "bestWomenFrac")] = 0
-for(w in waves[1]){
-  for(frac in seq(0.25,1,by=0.05)){
-    sequence = printMetricsNew(x = frac, waves, split = 2, type="max")
-    print(c(frac,w))
-    print(sequence)
-    print(round(newDF[toString(w),],2))
-    if(sequence[1] > newDF[toString(w),"expNum"]){
-      newDF[toString(w),"expNum"] = sequence[1]
-      newDF[toString(w),"bestNumFrac"] = frac
-    }
-    if(sequence[2] > newDF[toString(w),"expNumMen"]){
-      newDF[toString(w),"expNumMen"] = sequence[2]
-      newDF[toString(w),"bestMenFrac"] = frac
-    }
-    if(sequence[3] > newDF[toString(w),"expNumWomen"]){
-      newDF[toString(w),"expNumWomen"] = sequence[3]
-      newDF[toString(w),"bestWomenFrac"] = frac
-    }
+
+optimizeParameter = function(df, waves, pType){
+  newDF = data.frame()
+  for(wave in waves){
+    newDF[toString(wave),] = 0
   }
+  newDF[c("expNum", "expNumMen", "expNumWomen", "expNumPeople",
+          "bestNumFrac", "bestMenFrac", "bestWomenFrac", "bestPeopleFrac")] = 0
+  for(w in waves){
+    for(frac in seq(0.25,1,by=0.05)){
+      sequence = printMetricsNew(merged = df, x = frac, c(w), split = 2, type="max", pType)
+      if(sequence[1] >= newDF[toString(w),"expNum"]){
+        newDF[toString(w),"expNum"] = sequence[1]
+        newDF[toString(w),"bestNumFrac"] = frac
+      }
+      if(sequence[2] >= newDF[toString(w),"expNumMen"]){
+        newDF[toString(w),"expNumMen"] = sequence[2]
+        newDF[toString(w),"bestMenFrac"] = frac
+      }
+      if(sequence[3] >= newDF[toString(w),"expNumWomen"]){
+        newDF[toString(w),"expNumWomen"] = sequence[3]
+        newDF[toString(w),"bestWomenFrac"] = frac
+      }
+      if(sequence[4] >= newDF[toString(w),"expNumPeople"]){
+        newDF[toString(w),"expNumPeople"] = sequence[4]
+        newDF[toString(w),"bestPeopleFrac"] = frac
+      }
+      print(round(c(frac,w),2))
+      print(round(sequence,2))
+      print(round(newDF[toString(w),],2))
+    }
+  }  
+  return(newDF)
 }
 
-
-printMetricsNew(x = 0.25, waves= waves, split = 2, type="max")
+optimized = optimizeParameter(merged, waves, "matchGuess")
+optimized2 = optimizeParameter(merged, waves, "genericConjProbCal")
 waveHash = hash()
-waveHash[["7"]] = processWave(wave=merged[merged["wave"] == 7,], waveOrderSplit = 2, signRow = -1, signCol = -1, maxOrMin = "max", frac = 0.6)  
-waveHash[["9"]] = processWave(wave=merged[merged["wave"] == 9,], waveOrderSplit = 2, signRow = -1, signCol = -1, maxOrMin = "max", frac = 0.6)  
-waveHash[["11"]] = processWave(wave=merged[merged["wave"] == 11,], waveOrderSplit = 2, signRow = -1, signCol = -1, maxOrMin = "max", frac = 0.6)  
-waveHash[["12"]] = processWave(wave=merged[merged["wave"] == 12,], waveOrderSplit = 2, signRow = -1, signCol = -1, maxOrMin = "max", frac = 0.6)  
-waveHash[["19"]] = processWave(wave=merged[merged["wave"] == 19,], waveOrderSplit = 2, signRow = -1, signCol = -1, maxOrMin = "max", frac = 0.6)  
-waveHash[["21"]] = processWave(wave=merged[merged["wave"] == 21,], waveOrderSplit = 2, signRow = -1, signCol = -1, maxOrMin = "max", frac = 0.6)  
-waveHash[["4"]] = processWave(wave=merged[merged["wave"] == 4,], waveOrderSplit = 2, signRow = -1, signCol = -1, maxOrMin = "max", frac = 0.6)  
+for(wave in waves){
+  waveHash[[toString(wave)]] =  processWave(wave=merged[merged["wave"] == wave,], 
+                                            waveOrderSplit = 2, 
+                                            signRow = -1, signCol = -1, 
+                                            maxOrMin = "max", frac = 0.9,
+                                            probType = "matchGuess")
+}
 df = data.frame()
 df["Alpha",] = 0
 n = names(waveHash[["4"]])
@@ -249,9 +257,11 @@ length(unique(numMPos[["iidM"]]))
 length(unique(oldNumWPos[["iidW"]]))
 length(unique(numWPos[["iidW"]]))
 
+df = data.frame()
+df["old",] = 0
 sequence = c("oldNum","num", "oldNumM", "numM", "oldNumW", "numW")
-df = data.frame()
-df[sequence] =0
+
+df[sequence] = 0
 
 
 for(w in keys(waveHash)){
@@ -274,6 +284,6 @@ for(w in keys(waveHash)){
   df[toString(w),sequence[2]] = waveHash[[w]][1,sequence[2]]
 }
 
-
-
+df
+colSums(df)
 
