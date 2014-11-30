@@ -1,5 +1,10 @@
 merged = read.csv( '~/Desktop/speedDating/merged.csv')
-merged = merged[merged[["wave"]] %in% c(2, 4, 7, 9,11,17),]
+waves = unique(merged[["wave"]])
+for(wave in waves){
+  slice = merged[merged["wave"] == wave,]
+  cat("Wave: ", wave, " Number of rows: ", nrow(slice), "\n")
+}
+merged = merged[merged[["wave"]] %in% c(7, 9, 2, 11, 12, 14, 15, 19, 21, 4),]
 n = names(merged)
 menRatings = c(n[grep("RatingM",n)][1:8])
 menAvgs = c(n[grep("RatingM",n)][9:16])
@@ -84,25 +89,6 @@ for(w in unique(finalSlice[["wave"]])){
   finalSlice[finalSlice["wave"] == w,][["avgWaveDecM"]] = slice[["avgWaveDecM"]]
   finalSlice[finalSlice["wave"] == w,][["avgWaveDecW"]] = slice[["avgWaveDecW"]]
   finalSlice[finalSlice["wave"] == w,][["avgWaveMatch"]] = slice[["avgWaveMatch"]]
-}
-for(w in unique(finalSlice[["wave"]])){
-  slice = finalSlice[finalSlice["wave"] == w,]
-  print("wave")
-  print(w)
-  print("nrow")
-  print(nrow(slice))
-  print("decM")
-  print(mean(slice[["decM"]]))
-  print(mean(slice[["avgWaveDecM"]]))
-  print("decW")
-  print(mean(slice[["decW"]]))
-  print(mean(slice[["avgWaveDecW"]]))
-  print("decW")
-  print(mean(slice[["decW"]]))
-  print(mean(slice[["avgWaveDecW"]]))
-  print("match")
-  print(mean(slice[["match"]]))
-  print(mean(slice[["avgWaveMatch"]]))  
 }
 
 
@@ -211,16 +197,15 @@ probsToLORs = function(probs){
 
 n = names(merged)
 
-probs = n[grep("AvgDec|AvgMatch|decAvg|DecAvg", n)]
+probs = n[grep("AvgDec|AvgMatch|decAvg|DecAvg|avgWave", n)]
 
 for(prob in probs){
-  lor = gsub("Avg", "LOR", prob)
+  lor = gsub("Avg|avg", "LOR", prob)
+  
   merged[[lor]] = probsToLORs(merged[[prob]])
 }
-
-menTraits = n[grep("M$",n)][c(3:59,97:113)]
 n = names(merged)
-LORs = n[grep("LOR",n)]
+menTraits = n[grep("M$",n)][c(3:59,97:107,123)]
 womenTraits = gsub("M$", "W", menTraits)
 signedDiff = gsub("M$", "SignedDiff", menTraits)
 absDiff = gsub("M$", "AbsDiff", menTraits)

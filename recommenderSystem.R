@@ -22,10 +22,9 @@ recTypesDecW = gsub("$", "RecDecW", probs)
 recTypesMatch = gsub("$", "RecMatch", probs)
 
 
-menRecDF = merged[c("iidW", "iidM", "decM", "decW", "match", probs)]
+menRecDF = merged[c("iidW", "iidM", "wave", "decM", "decW", "match", probs)]
 for(i in 1:length(probs)){
   menRecDF[c(recTypes[i], recTypesDecM[i],recTypesDecW[i], recTypesMatch[i])] = 0
-  
 }
 menRecDF = menRecDF[order(-menRecDF["iidM"]),]
 for(iidM in unique(menRecDF[["iidM"]])){
@@ -95,13 +94,14 @@ for(i in 1:10){
 
 
 Percent = 100*baselinePercents
-plot(Percent, type="o", col="blue",xlim=c(2,6), ylim=c(30,85))
-title(main="At least one match in Top N (men)", col.main="red", font.main=4)
+plot(Percent, type="o", col="blue",xlim=c(1,7), ylim=c(15,75),
+     xlab=expression(paste('N')))
+title(main=">= 1 Match in Top N Recs (men)", col.main="red", font.main=4)
 lines(100*refinedMenPercents, type="o", col="red")
 
 lines(100*bestGuessPercents, type="o", col="green")
 lines(100*maxPercents, type="o", col="purple")
-legend(4.2, 43, c("Baseline","Men prefs only", "Composite"), cex=0.8, 
+legend(4.2, 35, c("Baseline","Men prefs", "Composite"), cex=0.8, 
        col=c("blue","red", "green"), pch=21:23, lty=1:3);
 
 menRecScoreFrameOld = menRecScoreFrame
@@ -157,7 +157,7 @@ lines(100*percentPossible, type="o", col="purple")
 
 
 
-womenRecDF = merged[c("iidW", "iidM", "decM", "decW", "match", probs)]
+womenRecDF = merged[c("iidW", "iidM", "wave", "decM", "decW", "match", probs)]
 for(i in 1:length(probs)){
   womenRecDF[c(recTypes[i], recTypesDecM[i],recTypesDecW[i], recTypesMatch[i])] = 0
   
@@ -234,4 +234,70 @@ legend(4.2, 43, c("Baseline","Women prefs only", "Composite"), cex=0.8,
        col=c("blue","red", "green"), pch=21:23, lty=1:3);
 
 
+#NEW STUFF
 
+waves = unique(menRecDF[["wave"]])
+
+wave7 = menRecDF[menRecDF["wave"] == 7,c("iidM", "iidW", "match", "decM", "decW", "matchGuess", "matchGuessRec")]
+
+
+
+ordering = data.frame()
+finalRecs[1:16,] = 0
+for(i in 1:16){
+  finalRecs[paste("round", toString(i), sep="_")] = 0
+}
+remainings = c()
+iidsM = unique(wave7[["iidM"]])
+for(iidM in iidsM){
+  slice = wave7[wave7["iidM"] == iidM,]
+  finalRecs[c(paste(toString(iidM),"probs",sep="_"),paste(toString(iidM),"recs",sep="_"))] = slice[c("matchGuess", "matchGuessRec")]
+  finalRecs[c(paste(toString(iidM),"remaining",sep="_"))] = slice["matchGuessRec"]
+}
+
+remainings = n[grep( "remaining", n)]
+for(i in 1:16){
+  for(j in 1:16){
+    for(iidW in final)
+    slice = finalRecs[finalRecs[paste("round", toString(i), sep="_")] == 0 ,]
+    slice = slice[order(slice[c(paste(toString(iidM),"probs",sep="_")])]
+  }
+}
+
+
+for(iidM in unique(wave7[["iidM"]])){
+  finalRecs[toString(iidM),][variables[1:2]] = wave7[wave7["iidM"] == iidM,][variables[1:2]]
+}
+
+
+x = toString(i)
+
+iidWMatrix[variables] = 0
+  for(iidM in unique(menRecDF[["iidM"]])){
+    iidWMatrix[iidM,variables[1:2]] = menRecDF[variables[1:2]]
+  }
+
+
+for(iidM in unique(wave7[["iidM"]])){
+  slice = wave7[wave7["iidM"] == iidM,]
+  iidWMatrix[toString(iidM),] = c(slice[["matchGuessRec"]], slice[["matchGuess"]],seq(0,0,length.out = 16))
+}
+
+n = names(iidWMatrix)
+
+newrecs = n[grep("newrec",n)]
+recs = n[grep("rec",n)][1:16]
+for(j in 1:16){
+  for(iidM in unique(wave7[["iidM"]])){
+    iidM = toString(iidM)
+    takens1 = iidWMatrix[[newrecs[j]]]
+    takens2 = as.list(iidWMatrix[iidM, newrecs])
+    for(i in 1:16){
+      if(iidWMatrix[iidM,newrecs[j]] == 0 & !(iidWMatrix[iidM,recs[i]] %in% takens1 ) & !(iidWMatrix[iidM,recs[i]] %in% takens2) ){ 
+        iidWMatrix[iidM,newrecs[j]] = iidWMatrix[iidM,recs[i]]
+      }      
+    }
+  }
+}
+
+iidWMatrix[newrecs]
