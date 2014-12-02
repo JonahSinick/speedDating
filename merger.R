@@ -1,105 +1,22 @@
-library(gdata)
-library(ggplot2)
-library(miscTools)
-library(xlsx)
-library(hash)
-library(aod)
-library(randomForest)
-library(LiblineaR)
-library(Matrix)
-library(plyr)
-library(recommenderlab)
-library(scatterplot3d)
-library(Metrics)
+men = read.csv("~/Desktop/speedDating/menCollaborativelyFiltered.csv")
+women = read.csv("~/Desktop/speedDating/womenCollaborativelyFiltered.csv")
 
-df = read.csv('~/Desktop/speedDating/handledBinaries.csv')
+merged[c("matchAvgM", "matchAvgW")] = 0
+slice = merged[c("iidW", "pidW", "match")]
+for(i in unique(merged[["iidW"]])){
+  newSlice = slice[slice["iidW"] == i, "match"]
+  merged[merged["iidW"] == i,][["matchAvgW"]]  = (sum(newSlice[["match"]]) - newSlice[["match"]])/(nrow(newSlice) - 1)
+}
+for(i in unique(merged[["pidW"]])){
+  newSlice = slice[slice["pidW"] == i, "match"]
+  merged[merged["pidW"] == i,][["matchAvgM"]]  = (sum(newSlice[["match"]]) - newSlice[["match"]])/(nrow(newSlice) - 1)
+}
 
-men = df[df["gender"] == 1,]
-women = df[df["gender"] == 0,]
 men = men[, !(names(men) %in% c("gender"))]
 women = women[, !(names(women) %in% c("gender"))]
-menNames = gsub("$", "M", names(men))
-colnames(men)[3:ncol(men)] = gsub("$", "M", names(men)[3:ncol(men)])
-colnames(women)[3:ncol(men)] = gsub("$", "W", names(women)[3:ncol(women)])
-men
-x_merges = c("iidW", "idW", "waveW", "partnerW", "pidW", "matchW", "sameRaceW")
-y_merges = c("pidM", "partnerM", "waveM", "idM", "iidM", "matchM", "sameRaceM")
-merged = merge(women, men, by.x = x_merges, by.y = y_merges)
-
-tempMerged = merge(men,women,y)
-
-n = names(df)
 ratings = n[grep("Rating",n)]
-ratingsExcDec = ratings[2:9]
-for(rating in ratingsExcDec){
-  df[df["gender"] == 1,][rating] = (menSlice[rating] - mean(menSlice[[rating]]))/sd(menSlice[[rating]])
-  df[df["gender"] == 0,][rating] = (womenSlice[rating] - mean(womenSlice[[rating]]))/sd(womenSlice[[rating]])
-}
-
-for(rating in ratings[1:7]){
-  ratingWaveAvg = gsub("$", "WaveAvg", rating)
-  df[ratingWaveAvg] = 0
-  for(wave in unique(df[["wave"]])){
-    print(c(rating,wave))
-    waveSliceMen = df[df["gender"] == 1 & df["wave"] == wave,][c("iid","pid",rating, ratingWaveAvg)]
-    waveSliceWomen = df[df["gender"] == 0 & df["wave"] == wave,][c("iid","pid",rating, ratingWaveAvg)]
-    iidMs = unique(waveSliceMen[["iid"]])
-    iidWs = unique(waveSliceWomen[["iid"]])
-    for(iidM in iidMs){
-      for(iidW in iidWs){
-        otherIIDMs = iidMs[iidMs != iidM]
-        otherIIDWs = iidWs[iidWs != iidW]
-        fakerIIDM = sample(otherIIDMs, 1)
-        fakerIIDW = sample(otherIIDWs, 1)
-        restricted = 
-        ratingsOfWomen = c(waveSliceMen[waveSliceMen["iid"] %in% otherIIDMs,rating],
-                           waveSliceMen[waveSliceMen["iid"] == fakerIIDM,rating])
-        ratingsOfMen = c(waveSliceWomen[waveSliceWomen["iid"] %in% otherIIDWs,rating],
-                           waveSliceWomen[waveSliceWomen["iid"] == fakerIIDW,rating])
-        df[df["gender"] == 1 & df["iid"] == iidM & df["pid"] == iidW, ratingWaveAvg] = mean(ratingsOfWomen)
-        df[df["gender"] == 0 & df["iid"] == iidW & df["pid"] == iidM, ratingWaveAvg] = mean(ratingsOfMen)        
-      }
-    }
-  }
-}
-for(wave in unique(df[["waves"]])){
-  slice = 
-  iidMs = 
-}
-
-df[c(ratingsExcDec, ratingsWaveAvgs)] = 0
-ratingSlice = df[c("iid", ratings,fakeRatings,raterAvgs)]
-for(iid in unique(df[["iid"]])){
-  iidSlice = df[df["iid"] == iid,]
-  for(i in 1:length(ratings)){
-    num = (sum(iidSlice[[ratings[i]]]) - iidSlice[ratings[i]] + iidSlice[fakeRatings[i]])
-    df[df["iid"] == iid,raterAvgs[i]] = num/nrow(iidSlice)
-    df[df["iid"] == iid,ratingsAdj[i]] = df[ratings[i]] - num/nrow(iidSlice)
-    
-  }
-}
-
-
-n = names(df)
-menSlice = menSlice[, !(names(menSlice) %in% c("gender"))]
-womenSlice = womenSlice[, !(names(womenSlice) %in% c("gender"))]
-n = names(menSlice)
-
-raterAvgs = gsub("Rating$", "RaterAvg", ratingsExcDec)
-for(iidM %in% unique(menSlice[["iidM"]])){
-  
-}
-
-
-menSlice[ratingsExcDec] = menSlice[ratingsExcDec] - colSums(menSlice[ratingsExcDec])/nrow(menSlice)
-fakeRatingsExcDec = gsub("$", "Fake",ratingsExcDec)
-for(r in ratings){
-  
-}
-
 menNames = gsub("$", "M", names(men))
 womenNames = gsub("$", "W", names(women))
-
 colnames(men) = menNames
 colnames(women) = womenNames
 menRatingIndices = grep("RatingM|RatingAvgM|GuessM|decAvgM", names(men))
@@ -107,14 +24,17 @@ menRatings  = names(men)[menRatingIndices]
 menRatings = gsub("M$", "W",menRatings)
 colnames(men)[menRatingIndices] = menRatings
 
-colSums(df[races])
-raceDrops = c("raceBlack", "raceLatino", "raceNativeAmer")
-df["raceOther"] = rowSums(df[c("raceOther",raceDrops)])
-colSums(df[fields])
-humDrops = c("fieldFilm", "field")
-df["fieldHum"] = rowSums(df)
-colSums(df[careers])
-colSums(df[goOuts])
-colSums(df[dates])
-df[goOuts[4]] = rowSums(df[goOuts[4:7]])
-df[c(fields,careers,races,goals)]
+womenRatingIndices = grep("RatingW|RatingAvgW|GuessW|decAvgW", names(women))
+womenRatings  = names(women)[womenRatingIndices]
+womenRatings = gsub("W$", "M",womenRatings)
+colnames(women)[womenRatingIndices] = womenRatings
+men = men[-2:0]
+women = women[-2:0]
+x_merges = c("iidW", "idW", "waveW", "partnerW", "pidW", "matchW", "sameraceW")
+y_merges = c("pidM", "partnerM", "waveM", "idM", "iidM", "matchM", "sameraceM")
+merged = merge(women, men, by.x = x_merges, by.y = y_merges)
+merged = merged[-2:0]
+names(merged)
+colnames(merged)[c(1,2,3,4,5,6,7)] = c("iidW", "idW", "wave", "idM", "iidM", "match", "sameRace")
+write.csv(merged, "~/Desktop/speedDating/merged.csv")
+
