@@ -1,0 +1,21 @@
+              decRating
+decRateeAvg          36
+attrRateeAvg         35
+sincRateeAvg          9
+intelRateeAvg        16
+funRateeAvg          27
+ambRateeAvg          21
+sharRateeAvg         25
+likeRateeAvg         33
+probRateeAvg         20
+
+                 decRating
+decRateeAvgAdj          35
+attrRateeAvgAdj         34
+sincRateeAvgAdj         10
+intelRateeAvgAdj        15
+funRateeAvgAdj          29
+ambRateeAvgAdj          22
+sharRateeAvgAdj         25
+likeRateeAvgAdj         34
+probRateeAvgAdj         22

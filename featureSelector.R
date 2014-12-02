@@ -11,9 +11,7 @@ library(plyr)
 library(recommenderlab)
 library(scatterplot3d)
 library(Metrics)
-
-
-merged = read.csv( '~/Desktop/speedDating/mergedCrossFeaturesAdded.csv')
+merged = read.csv('~/Desktop/speedDating/mergedBinariesHandled.csv')
 
 getProbs = function(train, test, features, tar, costTryType){
   bestLogLoss = 1000
@@ -41,8 +39,21 @@ getProbs = function(train, test, features, tar, costTryType){
 }
 
 
+probsToLORs = function(probs){
+  probs = ifelse(probs < 0.02, 0.02, probs)
+  probs = ifelse(probs > 0.98, 0.98, probs)
+  ORs = probs/(1 - probs)
+  return(log(ORs))
+}
 
-evenBetterBooster = function(df, base, tries, tar, numTimes,type){
+
+LORsToProbs = function(LORs){
+  ORs = exp(LORs)
+  probs = ORs/(1 + ORs)
+  return(probs)
+}
+
+evenBetterBooster = function(df, base, tries, tar, numTimes,type, fractionTrain){
   totalLogLoss = 0
   votes = hash()
   for(feature in tries){
@@ -54,7 +65,7 @@ evenBetterBooster = function(df, base, tries, tar, numTimes,type){
     }
     idxs = sample(1:nrow(df))
     startIdx = 1
-    midIdx = floor(2*(nrow(df)/3))
+    midIdx = floor(fractionTrain*nrow(df))
     trainIdxs = idxs[startIdx:midIdx]
     testIdxs = idxs[(midIdx + 1):nrow(df)]
     train = df[trainIdxs,]
@@ -70,70 +81,10 @@ evenBetterBooster = function(df, base, tries, tar, numTimes,type){
   for(feature in tries){
     votes[[feature]] = (votes[[feature]]/numTimes)
   }
-  return(votes)
+  return(values(votes))
 }
 
 
-n = names(merged)
-
-menTraits = n[grep("M$",n)][c(11:19,30:52,54:59,88:121)]
-womenTraits = gsub("M$", "W", menTraits)
-crosses = n[grep("Cross$", n)]
-diffs = n[grep("Diff$",n)][c(17:114,137:138)]
-
-
-features = c(menTraits, womenTraits, diffs, crosses)
-menBase = c("raterDecLORM", "decLORW", "attrAvgRatingW", "likeAvgRatingSignedDiff", "fieldsCrossLORDecM")
-tries = features
-votes = evenBetterBooster(merged, menBase[1:3], menBase[4:5], "decM", 100, "heuristic")
-sorted = sort(10000*values(votes),decreasing= TRUE)
-sorted
-currentTries = names(sorted)[1:20]
-
-
-
-womenBase = c("raterDecLORW", "decLORM", "attrAvgRatingM", "avgWaveDecW", 
-              "fieldsCrossLORDecW", "datesCrossAvgDecW", "careersCrossLORDecW",
-              "attrAvgRatingAbsDiff", "racesCrossAvgDecW")
-votes = evenBetterBooster(merged, womenBase[1:9], c(), "decW", 100, "heuristic")
-sorted = sort(10000*values(votes),decreasing= TRUE)
-sorted
-tries = names(sorted)[1:90]
-newTries = names(sorted)[1:20]
-
-n = names(merged)
-
-n = names(merged)
-
-menTraits = n[grep("M$",n)][c(11:19,30:52,54:59,88:121)]
-womenTraits = gsub("M$", "W", menTraits)
-matchTraits = n[grep("Match$",n)]
-matchTraits = matchTraits[grep( "LOR",matchTraits)]
-diffs = n[grep("Diff$",n)][c(17:114,137:138)]
-
-
-features =  c(matchTraits, diffs)
-matchBase = c("refinedConjProb", "fieldsCrossLORMatch", "careersCrossLORMatch", "goalsCrossLORMatch",
-              "likeAvgRatingAbsDiff", "goOutAbsDiff", "attrAvgRatingAbsDiff")
-votes = evenBetterBooster(newMerged, matchBase, tries, "match", 100, "heuristic")
-sorted = sort(10000*values(votes),decreasing= TRUE)
-sorted
-tries = names(sorted)[1:11]
-
-
-
-probsToLORs = function(probs){
-  probs = ifelse(probs < 0.03, 0.03, probs)
-  probs = ifelse(probs > 0.97, 0.97, probs)
-  ORs = probs/(1 - probs)
-  return(log(ORs))
-}
-
-LORsToProbs = function(LORs){
-  ORs = exp(LORs)
-  probs = ORs/(1 + ORs)
-  return(probs)
-}
 
 printMetrics = function(target,probs,cutoff=0.5){
   guesses = ifelse(probs > cutoff,1,0)
@@ -156,103 +107,76 @@ printMetrics = function(target,probs,cutoff=0.5){
 }
 
 
-populateDecsInner = function(train,test){
-  menBase = c("raterDecLORM", "decLORW", "attrAvgRatingW", "likeAvgRatingSignedDiff", "fieldsCrossLORDecM")
-  womenBase = c("raterDecLORW", "decLORM", "attrAvgRatingM", "avgWaveDecW", 
-                "fieldsCrossLORDecW", "datesCrossAvgDecW", "careersCrossLORDecW",
-                "attrAvgRatingAbsDiff", "racesCrossAvgDecW")
-  genDecMProb = getProbs(train, test,  c(menBase[1:3], "avgWaveDecM"), "decM","heuristic")
-  refDecMProb = getProbs(train, test,  menBase, "decM","heuristic")
-  genDecWProb = getProbs(train, test, womenBase[c(1:4)], "decW","heuristic")
-  refDecWProb = getProbs(train, test, womenBase, "decW","heuristic")
-  
-  test[["genericDecMProb"]] = test[["genericDecMProb"]] +  probsToLORs(genDecMProb)
-  test[["refinedDecMProb"]] = test[["refinedDecMProb"]] + probsToLORs(refDecMProb)
-  test[["genericDecWProb"]] = test[["genericDecWProb"]] +  probsToLORs(genDecWProb)
-  test[["refinedDecWProb"]] = test[["refinedDecWProb"]] +  probsToLORs(refDecWProb)  
-  return(test[c("genericDecMProb", "refinedDecMProb", "genericDecWProb","refinedDecWProb")])
-}
-
-populateMatches = function(train, test){
-  matchGuessFeatures = c("refinedConjProb", "fieldsCrossLORMatch", "careersCrossLORMatch", "goalsCrossLORMatch",
-                         "likeAvgRatingAbsDiff", "goOutAbsDiff", "attrAvgRatingAbsDiff")
-  test[["genericConjProbCal"]] = test[["genericConjProbCal"]] +  probsToLORs(getProbs(train, test, c("genericConjProb"), "match","heuristic"))  
-  test[["refinedConjProbCal"]] = test[["refinedConjProbCal"]] +  probsToLORs(getProbs(train, test, c("refinedConjProb"), "match","heuristic"))  
-  test[["matchGuess"]] = test[["matchGuess"]] +  probsToLORs(getProbs(train, test, matchGuessFeatures, "match","heuristic"))
-  return(test[c("genericConjProbCal", "refinedConjProbCal", "matchGuess")])
-}
-
-
-
-populateProbs = function(newMerged, numTimes1, numTimes2){
-  rows = 1:nrow(newMerged)
-  numRows = nrow(newMerged)
-  scrambledIdxs = sample(rows)
-  split = floor(numRows/10)
-  probs1 = c("genericDecMProb", "refinedDecMProb", "genericDecWProb","refinedDecWProb")
-  probs2 = c("genericConjProb", "refinedConjProb")
-  probs3 = c("genericConjProbCal", "refinedConjProbCal", "matchGuess")
-  probs = c(probs1,probs2,probs3)
-  newMerged[probs] = 0
-  for(i in 1:10){
-    print(i)
-    if(i < 10){
-      testIdxs = scrambledIdxs[(1 + (i - 1)*split):(i*split)]
+featureSelector = function(df, startingFeatures, features, target, numTries, finalLength, fractionTrain){
+  currentFeatures = startingFeatures
+  remainingFeatures = features
+  for(i in 1:(finalLength - length(startingFeatures))){
+    
+    cat("Length of current features: ", length(currentFeatures), " Length of remaining features: ", length(remainingFeatures), "\n",sep="")
+    print(currentFeatures)
+    votes = evenBetterBooster(df, currentFeatures, remainingFeatures, target, numTries, "heuristic", fractionTrain)
+    if(length(votes) >= 1){
+      sorted = sort(10000*votes, decreasing= TRUE)
+      print(sorted)
+      remainingFeatures = names(sorted[sorted >= 1])
+      if(length(features) > 0 ){
+        currentFeatures[length(currentFeatures) + 1] = remainingFeatures[[1]]
+      } 
     }
-    if(i == 10){
-      testIdxs = scrambledIdxs[(1 + (i - 1)*split):numRows]
-    }
-    print(length(testIdxs))
-    trainIdxs = scrambledIdxs[!(scrambledIdxs %in% testIdxs)]
-    train = newMerged[trainIdxs,]
-    test = newMerged[testIdxs,]  
-    c("genericDecMProb", "refinedDecMProb", "genericDecWProb","refinedDecWProb")
-    for(j in 1:numTimes1){
-      print(c(i,j))
-      train1Idxs = sample(1:nrow(train))[1:floor(nrow(train)/2)]
-      train1 = train[(1:nrow(train) %in% train1Idxs),]
-      train2 = train[!(1:nrow(train) %in% train1Idxs),]
-      train[(1:nrow(train) %in% train1Idxs),][probs1] = populateDecsInner(train2, train1)[probs1]
-      train[!(1:nrow(train) %in% train1Idxs),][probs1] = populateDecsInner(train1, train2)[probs1]      
-      trainNewIdxs = sample(1:nrow(train))[1:floor(1*nrow(train)/2)]
-      trainNew = train[(1:nrow(train) %in% trainNewIdxs),]
-      test[probs1] = populateDecsInner(trainNew, test)[probs1]
-    }
-    train[probs1] = train[probs1]/numTimes1
-    test[probs1] = test[probs1]/(numTimes1)
-    train[["genericConjProb"]] = probsToLORs(LORsToProbs(train[["genericDecMProb"]])*LORsToProbs(train[["genericDecWProb"]]))
-    train[["refinedConjProb"]] = probsToLORs(LORsToProbs(train[["genericDecMProb"]])*LORsToProbs(train[["refinedDecWProb"]]))
-    test[["genericConjProb"]] = probsToLORs(LORsToProbs(test[["genericDecMProb"]])*LORsToProbs(test[["genericDecWProb"]]))
-    test[["refinedConjProb"]] = probsToLORs(LORsToProbs(test[["genericDecMProb"]])*LORsToProbs(test[["refinedDecWProb"]]))  
-    for(j in 1:numTimes2){
-      print(c(i,j))
-      train1Idxs = sample(1:nrow(train))[1:floor(1*nrow(train)/2)]
-      trainNew = train[(1:nrow(train) %in% train1Idxs),]
-      test[probs3] = populateMatches(trainNew, test)[probs3]
-    }
-    test[c(probs3)] = test[c(probs3)]/(numTimes2)
-    newMerged[testIdxs,] = test
   }
-  newMerged[probs] = LORsToProbs(newMerged[probs])
-  
-  return(newMerged)
+  h = hash()
+  h[["remainingFeatures"]] = remainingFeatures
+  h[["currentFeatures"]] = currentFeatures
+  return(h)
 }
 
-probs = c("genericDecMProb", "refinedDecMProb", "genericDecWProb", 
-          "refinedDecWProb", "genericConjProb", "refinedConjProb", "genericConjProbCal", 
-          "refinedConjProbCal", "matchGuess")
-newMerged = populateProbs(merged, 100, 100)
+
+n = names(merged)
+myFeatures =n[grep("RaterAvg|RateeAvg|WaveAvg|field|career|imprace|imprelig|Pref|race|goal|date|goOut",n)]
+decFeatures = myFeatures[grep("dec",myFeatures)]
+for(feat in decFeatures){
+  merged[[feat]] = probsToLORs(merged[[feat]])  
+}
+newFeatures = myFeatures[!(myFeatures %in% myFeatures[grep("CD|After|raceM|raceW|goalW|goalM", myFeatures)])]
+
+menBase = c("attrRateeAvgAdjM", "likeRateeAvgAdjM", "decRateeAvgM", "decRaterAvgM", "sharRateeAvgAdjW")
+names = selectedFeaturesM[["remainingFeatures"]]
+selectedFeaturesM = featureSelector(df = merged, startingFeatures = c(menBase), 
+                                    features= names[1], target = "decRatingM", numTries = 1000, 
+                                    finalLength = 6, fractionTrain = 0.66)
 
 
-printMetrics(newMerged[["decM"]], newMerged[[probs[1]]])
-printMetrics(newMerged[["decM"]], newMerged[[probs[2]]])
-printMetrics(newMerged[["decW"]], newMerged[[probs[3]]])
-printMetrics(newMerged[["decW"]], newMerged[[probs[4]]])
-printMetrics(newMerged[["match"]], newMerged[[probs[5]]])
-printMetrics(newMerged[["match"]], newMerged[[probs[7]]])
+womenBase = c("decRaterAvgW", "attrRateeAvgAdjW", "decRateeAvgW", "date4Mdate6WCross")
+names = selectedFeaturesW[["remainingFeatures"]]
+selectedFeaturesW = featureSelector(df = merged, startingFeatures = womenBase, 
+                                    features= names, target = "decRatingW", numTries = 100, 
+                                    finalLength = 7, fractionTrain = 0.66)
+selectedFeaturesW[["remainingFeatures"]]
 
-printMetrics(newMerged[["match"]], newMerged[[probs[8]]])
-printMetrics(newMerged[["match"]], newMerged[[probs[9]]])
 
+
+
+selectedFeaturesW = featureSelector(df = merged, startingFeatures = womenBase, 
+                                    features= myFeatures, target = "decW", numTries = 300, 
+                                    finalLength = 20, fractionTrain = 0.66)
+
+newMerged = populateProbs(merged, 100, 100, 0.66)
+printMetrics(newMerged[["decM"]], newMerged[["genericDecMProb"]])
+printMetrics(newMerged[["decM"]], newMerged[["refinedDecMProb"]])
+printMetrics(newMerged[["decW"]], newMerged[["genericDecWProb"]])
+printMetrics(newMerged[["decW"]], newMerged[["refinedDecWProb"]])
+
+printMetrics(newMerged[["match"]], newMerged[["genericConjProbCal"]])
+printMetrics(newMerged[["match"]], newMerged[["refinedConjProbCal"]])
+printMetrics(newMerged[["match"]], newMerged[["matchGuess"]])
+
+matchBase= c("refinedConjProb", "goalsCrossLORMatch",  "careersCrossLORMatch",   "likeAvgRatingAbsDiff",   "fieldsCrossLORMatch", "goOutAbsDiff")
+matchStuff = n[grep("Match$",n)]
+matchStuff = matchStuff[grep("LOR", matchStuff)]
+matchFeatures = c(diffs, matchStuff[1:15], crosses)
+selectedFeaturesMatch = featureSelector(df = newMerged, startingFeatures = matchBase, 
+                                        features= c("goOutAbsDiff"), target = "match", numTries = 300, 
+                                        finalLength = 20, fractionTrain = 0.66)
+
+newMerged = populateProbs(newMerged, 25, 25, 0.66)
 write.csv(newMerged, '~/Desktop/speedDating/mergedProbsAddedFinal.csv')
- 
