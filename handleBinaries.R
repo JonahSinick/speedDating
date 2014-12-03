@@ -21,45 +21,22 @@ races = c("Black", "White", "Latino",
 
 goals = c("funNight", "MeetNew", "GetDate",
           "SerRel", "SayDid", "Other")
-
+df[["date"]] = ifelse(df[["date"]] <3, 3, df[["date"]])
+df[["goOut"]] = ifelse(df[["goOut"]] >4, 4, df[["goOut"]])
 binHash = hash()
-h[["dates"] = c("1","2","3", "4", "5", "6", "7")
-goOuts = c("1","2","3", "4", "5", "6", "7")
-fields = gsub("^", "field", fields)
-careers = gsub("^", "career", careers)
-races =  gsub("^", "race", races)
-goals =  gsub("^", "goal", goals)
-dates = gsub("^", "date", dates)
-goOuts = gsub("^", "goOut", goOuts)
+binHash[["date"]] = gsub( "^", "date", c("3", "4", "5", "6", "7"))
+binHash[["goOut"]] = gsub( "^", "goOut", c("1","2","3", "4"))
+binHash[["fieldCD"]] = gsub("^", "field", fields)
+binHash[["careerCD"]] = gsub("^", "career", careers)
+binHash[["race"]] =  gsub("^", "race", races)
+binHash[["goal"]] =  gsub("^", "goal", goals)
 
-for(i in c(1:length(races))){
-  slice = df[df["race"] == i,]
-  lenSlice = nrow(slice)
-  
-  df[[races[i]]] = ifelse(df[["race"]] == i, 1, 0)
+for(binName in keys(binHash)){
+  bins = binHash[[binName]]
+  for(idx in 1:length(bins)){
+    df[[bins[idx]]] = ifelse(df[[binName]] == idx, 1, 0)
+  }
 }
-
-for(i in 1:length(careers)){
-  df[[careers[i]]] = ifelse(df[["careerCD"]] == i, 1, 0)
-}
-for(i in 1:length(fields)){
-  df[[fields[i]]] = ifelse(df[["fieldCD"]] == i, 1, 0)
-}
-
-for(i in 1:length(goals)){
-  df[[goals[i]]] = ifelse(df[["goal"]] == i, 1, 0)
-}
-
-
-for(i in 1:length(goOuts)){
-  df[[goOuts[i]]] = ifelse(df[["goOut"]] == i, 1, 0)
-}
-
-for(i in 1:length(dates)){
-  df[[dates[i]]] = ifelse(df[["date"]] == i, 1, 0)
-}
-
-
 
 write.csv(df, '~/Desktop/speedDating/handledBinaries.csv')
 

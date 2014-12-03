@@ -40,14 +40,6 @@ getProbs = function(train, test, features, tar, costTryType){
 }
 
 
-probsToLORs = function(probs){
-  probs = ifelse(probs < 0.03, 0.03, probs)
-  probs = ifelse(probs > 0.97, 0.97, probs)
-  ORs = probs/(1 - probs)
-  return(log(ORs))
-}
-
-
 
 populateDecsInner = function(train,test){
   menBase = c("raterDecLORM", "decLORW", "attrAvgRatingW", "LORWaveDecAbsDiff")
@@ -77,62 +69,6 @@ populateMatches = function(train, test){
   return(test[c("genericConjProbCal", "refinedConjProbCal", "matchGuess")])
 }
 
-evenBetterBooster = function(df, base, tries, tar, numTimes,type, fractionTrain){
-  totalLogLoss = 0
-  votes = hash()
-  for(feature in tries){
-    votes[[feature]] = 0
-  }
-  for(i in 1:numTimes){
-    if(i %% 5 == 0){
-      print(i)
-    }
-    idxs = sample(1:nrow(df))
-    startIdx = 1
-    midIdx = floor(fractionTrain*nrow(df))
-    trainIdxs = idxs[startIdx:midIdx]
-    testIdxs = idxs[(midIdx + 1):nrow(df)]
-    train = df[trainIdxs,]
-    test = df[testIdxs,]
-    baseLogLoss = logLoss(test[[tar]], getProbs(train, test, base,tar,type))
-    totalLogLoss = baseLogLoss + totalLogLoss
-    for(feature in tries){
-      newLogLoss = logLoss(test[[tar]], getProbs(train, test, c(base,feature),tar,type))
-      votes[[feature]] = votes[[feature]] + baseLogLoss -  newLogLoss 
-    }
-  }
-  print((totalLogLoss/numTimes))
-  for(feature in tries){
-    votes[[feature]] = (votes[[feature]]/numTimes)
-  }
-  return(values(votes))
-}
-
-LORsToProbs = function(LORs){
-  ORs = exp(LORs)
-  probs = ORs/(1 + ORs)
-  return(probs)
-}
-
-printMetrics = function(target,probs,cutoff=0.5){
-  guesses = ifelse(probs > cutoff,1,0)
-  TP = sum(ifelse(guesses == 1 & target == 1, 1,0))
-  FP = sum(ifelse(guesses == 1 & target == 0, 1,0))
-  TN = sum(ifelse(guesses == 0 & target == 0, 1,0))
-  FN = sum(ifelse(guesses == 0 & target == 1, 1,0))
-  ER = (FP + FN)/length(target)
-  FPER = FP/(FP + TP)
-  FNER = FN/(FN + TN)
-  fracYesFound = (TP)/(TP + FN)
-  logLoss = logLoss(target,probs)
-  cat("Log Loss: ", round(logLoss,3) , 
-      " Error Rate: ", (100*round(ER,3)),
-      "% False Pos Rate: ", (100*round(FPER,3)), 
-      "% False Neg Rate: ", (100*round(FNER,3)),
-      "% Frac Yes Found: ", (100*round(fracYesFound,3)),
-      "%\n", sep="")
-  print(table(guesses,target))
-}
 
 
 featureSelector = function(df, startingFeatures, features, target, numTries, finalLength, fractionTrain){
