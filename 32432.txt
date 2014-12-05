@@ -1,0 +1,10 @@
+                decRating
+attrRating             56
+likeRating             68
+decRateeAvg            27
+likeRateeAvg           32
+attrRateeAvg           27
+combRating             85
+combRatingGuess        42
+combRateeAvg           31
+> 

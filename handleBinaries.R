@@ -1,4 +1,6 @@
+source("libraries.R")
 df = read.csv('~/Desktop/speedDating/cleanedData.csv')
+
 
 
 fields = c("Law", "Math", "SocialSci",

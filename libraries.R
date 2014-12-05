@@ -20,12 +20,19 @@ LORsToProbs = function(LORs){
   return(probs)
 }
 
+LORColsToProbs = function(df, LORs){
+  for(LOR in LORs){
+    df[[LOR]] = LORsToProbs(df[[LOR]])
+  }
+  return(df)
+}
+
 adjustProbs = function(probs,threshold=0.01){
   probs = ifelse(probs < threshold,threshold, probs)
   probs = ifelse(probs > 1 - threshold, 1 - threshold, probs)
   return(probs)
 }
-probsColsToLORS = function(df, probNames){
+probColsToLORs = function(df, probNames){
   for(probs in probNames){
     df[[probs]] = probsToLORs(df[[probs]])
   }
@@ -60,6 +67,21 @@ printMetrics = function(target,probs,cutoff=0.5){
 }
 niceCors = function(df, rows, cols, multiplier = 100){
   cors = round(multiplier*cor(df[rows],df[cols]))
-  print(cors)
+  return(cors)
 }
 
+makeCorDF = function(df, nameHash, colNames, target){
+  corDF = data.frame()
+  for(key in keys(nameHash)){
+    corDF[key,] = 0    
+  }
+  corDF[colNames] = 0
+  for(key in keys(nameHash)){
+    replacements = c(matrix(niceCors(df, nameHash[[key]], c(target))))
+    for(i in 1:length(replacements)){
+      print(corDF)
+      corDF[key,i] = replacements[i]
+    }
+  }
+  return(corDF)
+}

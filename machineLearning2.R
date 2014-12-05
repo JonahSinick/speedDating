@@ -20,9 +20,9 @@ featuresSelector = function(train, test, currentFeatures, remainingFeatures, tar
   origLen = length(currentFeatures)
   for(i in 1:numRequested){
     cat("Length of current features: ", length(currentFeatures), " Length of remaining features: ", length(remainingFeatures), "\n",sep="")
-    scores = featureSelector(train, test, currentFeatures, remainingFeatures, tar, fracTrain, numTimes)
+    scores = names(featureSelector(train, test, currentFeatures, remainingFeatures, tar, fracTrain, numTimes))
     if(length(scores) > 1 &  length(currentFeatures) < (numRequested + length(origLen))){
-      remainingFeatures = names(scores)[scores > 1]  
+      remainingFeatures = names(scores)[scores >=5]  
       currentFeatures[length(currentFeatures) + 1] = remainingFeatures[1]
       remainingFeatures = remainingFeatures[-1:0]
       
@@ -37,16 +37,13 @@ featuresSelector = function(train, test, currentFeatures, remainingFeatures, tar
   return(h)
 }
 
-featureSelector = function(train, test, base, tries, tar, fracTrain, numTimes){
+featureSelector = function(train, test, base, tries, tar, fracTrain, numTimes, thres){
   totalLogLoss = 0
   scores = hash()
   for(feature in tries){
     scores[[feature]] = 0
   }
   for(i in 1:numTimes){
-    if(i %% 5 == 0){
-      print(i)
-    }
     set.seed = i; idxs =  sample(1:nrow(train))
     startIdx = 1
     midIdx = floor(nrow(train)*fracTrain)
@@ -65,12 +62,10 @@ featureSelector = function(train, test, base, tries, tar, fracTrain, numTimes){
   }
   scores = values(scores)
   sorted = round(10000*sort(scores, decreasing= TRUE))
-  sorted = sorted[sorted > 1]
+  sorted = sorted[sorted >= thres]
   baseLogLoss = round(10000*baseLogLoss)
   bestFeature = names(sorted[1])
-  cat("Top 5: ", "\n", sep="")
-  i = min(length(sorted), 5)
-  print(sorted[1:i])
+  print(sorted)
   cat("Original LogLoss: ", baseLogLoss, " Best Log Loss ", baseLogLoss - sorted[1], " Best feature: ", bestFeature, "\n", sep="")
   currentFeatures = c(base, bestFeature)
   cat("currentFeatures:", "\n", sep="")
