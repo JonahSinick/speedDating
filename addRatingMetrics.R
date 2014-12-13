@@ -1,5 +1,8 @@
-source("libraries.R")
-df = read.csv('~/Desktop/speedDating/handledBinaries.csv')
+
+
+
+source("~/Desktop/speedDatingFinal/libraries.R")
+df = read.csv('~/Desktop/speedDatingFinal/cleanedData.csv')
 
 makeRatingSums = function(df, ratings){
   for(rating in ratings){
@@ -25,7 +28,6 @@ makeRatingSums = function(df, ratings){
 
 makeSurrogates = function(df){
   df[c("surIID", "surPID")] = 0
-  
   for(wave in unique(df[["wave"]])){
     slice = df[df["wave"] == wave,]
     iids = unique(slice[["iid"]])
@@ -45,19 +47,19 @@ makeSurrogates = function(df){
 }
 
 
-makeAvgs = function(df,ratings){
+makeAvgs = function(df, ratings){
+  waves = unique(df[["wave"]])
   for(rating in ratings){
-    print(rating)
     raterSum = gsub("Rating", "RaterSum", rating)
     rateeSum = gsub("Rating", "RateeSum", rating)
     waveSum = gsub("Rating", "WaveSum", rating)
     raterAvg = gsub("Rating", "RaterAvg", rating)
-    rateeAvg = gsub("Rating", "RateeAvg", rating)
+    rateeAvg = gsub("Rating", "Avg", rating)
     waveAvg = gsub("Rating", "WaveAvg", rating)
     df[c(raterAvg,rateeAvg,waveAvg)] = 0
     names = c("iid","pid","surIID", "surPID","round", rating, raterSum,rateeSum,waveSum, raterAvg,rateeAvg,waveAvg)
-    for(wave in unique(df[["wave"]])){
-      print(wave)
+    for(wave in waves){
+      print(c(rating,wave))
       waveSlice = df[df["wave"] == wave,][names]
       numIIDs = length(unique(waveSlice[["iid"]]))
       numPIDs = length(unique(waveSlice[["pid"]]))
@@ -76,121 +78,70 @@ makeAvgs = function(df,ratings){
       }
       df[df["wave"] == wave,][names] = waveSlice[names]
     }
-    df[paste(raterAvg,"Adj", sep="")] = df[raterAvg] - df[waveAvg]
+    if(rating == "decRating"){
+      df = probColsToLORs(df, c(raterAvg, rateeAvg, waveAvg))
+    }
     df[rateeAvg] = df[rateeAvg] - df[waveAvg]
   }
   n = names(df)
-  bads = n[grep("WaveAvg|Guess|RaterAvg|Sum",n)]
-  bads = bads[!(bads %in% bads[grep("dec", bads)])]
+  bads = n[grep("WaveAvg|Sum",n)]
   df = df[!(n %in% bads)]
-  df = probColsToLORs(df, c("decRaterAvg", "decRateeAvg" ))
   return(df)
 }
 
-addCombs = function(df){
-  df["dec"] = df["decRating"]
-  df[c("combRateeAvg", "combRatingExcGuess", "combRatingIncGuess")] = 0
-  names = c("decRating", "likeRating", "attrRating", "decRateeAvg", "attrRateeAvg", "likeRateeAvg")
-  df[names] = scale(df[names])
-  df["combRatingInc"] = (df["decRating"] + df["likeRating"] + df["attrRating"])/3
-  df["combRatingExc"] = (df["likeRating"] + df["attrRating"])/2
-  df[["combRateeAvg"]] = rowSums(df[c("decRateeAvg", "attrRateeAvg", "likeRateeAvg")])/3
-  waves = unique(df[["wave"]])
-  for(wave in waves){
-    slice = df[df["wave"] == wave,]
-    raters = unique(slice[["iid"]])
-    ratees = unique(slice[["pid"]])
-    slice = slice[order(slice["pid"]),]
-    for(i in 1:nrow(slice)){
-      rater = slice[i,"iid"]
-      ratee = slice[i,"pid"]
-      slice[-i,"temp"] = slice[-i,"combRatingInc"]
-      slice[i,"temp"] = NA
-      ratingMatrix = matrix(slice[["temp"]], nrow = length(raters), ncol = length(ratees))
-      r <- as(ratingMatrix, "realRatingMatrix")
-      recommender = Recommender(r, method = "UBCF")
-      recom <- predict(recommender, r, type="ratings") 
-      slice[["temp"]] = c(as(recom, "matrix"))
-      slice[i,"combRatingIncGuess"] = slice[i,"temp"]
+addGuesses = function(df, ratings){
+  for(rating in ratings){
+    guessName = paste(rating,"Guess",sep="")
+    df[guessName] = 0
+    waves = unique(df[["wave"]])
+    for(wave in waves){
+      print(c(guessName,wave))
+      df[df["wave"] == wave,][[guessName]] = addGuessToWave(df[df["wave"] == wave,], rating, guessName)
     }
-    for(i in 1:nrow(slice)){
-      rater = slice[i,"iid"]
-      ratee = slice[i,"pid"]
-      slice[-i,"temp"] = slice[-i,"combRatingExc"]
-      slice[i,"temp"] = NA
-      ratingMatrix = matrix(slice[["temp"]], nrow = length(raters), ncol = length(ratees))
-      r <- as(ratingMatrix, "realRatingMatrix")
-      recommender = Recommender(r, method = "UBCF")
-      recom <- predict(recommender, r, type="ratings") 
-      slice[["temp"]] = c(as(recom, "matrix"))
-      slice[i,"combRatingExcGuess"] = slice[i,"temp"]
-    }
-    slice = slice[order(slice["iid"]),] 
-    df[df["wave"] == wave,][["combRatingIncGuess"]] = slice[["combRatingIncGuess"]]
-    df[df["wave"] == wave,][["combRatingExcGuess"]] = slice[["combRatingExcGuess"]]
   }
   return(df)
 }
 
-
-makeRatingMetrics = function(df){
-  n = names(df)
-  ratings = n[grep("Rating",n)]
-  print('startingSur')
-  df = makeSurrogates(df)
-  print('startingSums')
-  df = makeRatingSums(df, ratings)
-  print('startingAvgs')
-  df = makeAvgs(df, ratings)
-  print('addComb')
-  df = addCombs(df)
-  return(df)
+addGuessToWave = function(slice, rating, guessName){
+  slice["temp"] = 0
+  raters = unique(slice[["iid"]])
+  ratees = unique(slice[["pid"]])
+  slice = slice[order(slice["pid"]),]
+  for(i in 1:nrow(slice)){
+    rater = slice[i,"iid"]
+    ratee = slice[i,"pid"]
+    slice[-i,"temp"] = slice[-i,rating]
+    slice[i,"temp"] = NA
+    ratingMatrix = matrix(slice[["temp"]], nrow = length(raters), ncol = length(ratees))
+    r <- as(ratingMatrix, "realRatingMatrix")
+    recommender = Recommender(r, method = "UBCF")
+    recom <- predict(recommender, r, type="ratings") 
+    slice[["temp"]] = c(as(recom, "matrix"))
+    slice[i,guessName] = slice[i,"temp"]
+  }
+  slice = slice[order(slice["iid"]),] 
+  return(slice[[guessName]])
 }
 
-names = c( "attrRating", "likeRating", "decRateeAvg", "likeRateeAvg", "attrRateeAvg", "combRateeAvg", "combRatingInc" , "combRatingExc", "combRatingIncGuess", "combRatingExcGuess")
-targets = c("decRating", "combRatingInc", "combRatingExc")
-niceCors(slice, names, targets)
+
+
+makeRatingMetrics = function(df){
+  df[["attrLikeRating"]] = rowSums(scale(df[c("attrRating", "likeRating")]))/2
+  df[["attrLikeDecRating"]] = rowSums(scale(df[c("decRating", "attrRating", "likeRating")]))/3
+  n = names(df)
+  ratings = n[grep("Rating$",n)]
+  df = makeRatingSums(df, ratings)
+  df = makeSurrogates(df)
+  df = makeAvgs(df, ratings)
+  n = names(df)
+  ratings = n[grep("Rating$",n)]
+  df = addGuesses(df,ratings)
+  return(df)
+}
 
 men = df[df["gender"] == 1,]
 women = df[df["gender"] == 0,]
 men = makeRatingMetrics(men)
-write.csv(men , '~/Desktop/speedDating/ratingMetricsAddedMen.csv')
-
+write.csv(men , '~/Desktop/speedDatingFinal/ratingMetricsAddedMen.csv')
 women = makeRatingMetrics(women)
-write.csv(women , '~/Desktop/speedDating/ratingMetricsAddedWomen.csv')
-
-
-men = men[, !(names(men) %in% c("gender", "X"))]
-women = women[, !(names(women) %in% c("gender", "X"))]
-men = men[-1:0]
-women = women[-1:0]
-colnames(men)= gsub("$", "M", names(men))
-colnames(women) = gsub("$", "W", names(women))
-x_merges = c("iidW", "idW", "waveW", "partnerW", "pidW", "matchW", "sameRaceW")
-y_merges = c("pidM", "partnerM", "waveM", "idM", "iidM", "matchM", "sameRaceM")
-merged = merge(women, men, by.x = x_merges, by.y = y_merges)
-
-
-colnames(merged)[c(1,2,3,4,5,6,7)] = c("iidW", "idW", "wave", "idM", "iidM", "match", "sameRace")
-
-mean(merged[["combRateeAvgM"]])
-mean(merged[["combRateeAvgW"]])
-n = names(merged)
-
-features = n[grep("imprace|imprelig|happy|expnum|Pref|date$|goOut$|RaterAvgM$|RaterAvgW$|RateeAvgW$|RateeAvgM$",n)]
-featuresW = features[grep("W$", features)]
-featuresM = features[grep("M$", features)]
-niceCors(merged, featuresM, "decRatingM")
-niceCors(merged, featuresW, "decRatingW")
-colNamesDiffs =  gsub("M", "HighWLowMDiff" ,featuresM)
-colNamesAbsDiffs =  gsub("M", "AbsDiff" ,featuresM)
-for(i in 1:length(featuresW)){
-  merged[colNamesDiffs[i]] = merged[featuresW[i]] - merged[featuresM[i]]
-  merged[colNamesAbsDiffs[i]] = abs(merged[featuresW[i]] - merged[featuresM[i]])
-}
-
-n = names(merged)
-combs = n[grep("comb",n)]
-diffs = n[grep("Diff", n)]
-niceCors(merged, diffs, c("decRatingM", "decRatingW"))
-write.csv(merged , '~/Desktop/speedDating/ratingMetricsAdded.csv')
+write.csv(women , '~/Desktop/speedDatingFinal/ratingMetricsAddedWomen.csv')
