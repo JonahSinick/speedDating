@@ -1,17 +1,29 @@
-source("libraries.R")
+source("~/Desktop/speedDatingFinal/libraries.R")
 
 
-getProbs = function(train, test, features, tar){
-  s=scale(train[features],center=TRUE,scale=TRUE)
-  co = c(heuristicC(s))
-  m=LiblineaR(data=s,labels=factor(train[,tar]),type=0,cost=co,bias=TRUE,verbose=FALSE)
-  s2= scale(test[features],attr(s,"scaled:center"),attr(s,"scaled:scale"))
-  p=predict(m,s2,prob=TRUE)
-  probs = p$probabilities[,"1"]  
+getProbs = function(train, test, features, tar, model="linear"){
+  if(model == "linear"){
+    s=scale(train[features],center=TRUE,scale=TRUE)
+    co = c(heuristicC(s))
+    m=LiblineaR(data=s,labels=factor(train[,tar]),type=0,cost=co,bias=TRUE,verbose=FALSE)
+    s2= scale(test[features],attr(s,"scaled:center"),attr(s,"scaled:scale"))    
+    predictions =predict(m,s2,prob=TRUE)
+    probs = predictions$probabilities[,"1"]  
+  }
+  if(model == "forest"){
+    rf_fit <- randomForest(y=as.factor(train[,tar]), x=train[features], importance=TRUE, ntree=400)
+    predictions = predict(rf_fit, test, type="prob")
+    probs = predictions[,"1"]  
+  }
+  probs = ifelse(probs < 0.01, 0.01, probs)
+  probs = ifelse(probs > 0.99, 0.99, probs)
   return(probs)
 }
 
-
+getLORs = function(train, test, features, tar, model="linear"){
+  probs = getProbs(train, test, features, tar, model="linear")
+  return(probsToLORs)
+}
 
 
 
@@ -20,9 +32,9 @@ featuresSelector = function(train, test, currentFeatures, remainingFeatures, tar
   origLen = length(currentFeatures)
   for(i in 1:numRequested){
     cat("Length of current features: ", length(currentFeatures), " Length of remaining features: ", length(remainingFeatures), "\n",sep="")
-    scores = featureSelector(train, test, currentFeatures, remainingFeatures, tar, fracTrain, numTimes)
+    scores = names(featureSelector(train, test, currentFeatures, remainingFeatures, tar, fracTrain, numTimes))
     if(length(scores) > 1 &  length(currentFeatures) < (numRequested + length(origLen))){
-      remainingFeatures = names(scores)[scores > 1]  
+      remainingFeatures = names(scores)[scores >=5]  
       currentFeatures[length(currentFeatures) + 1] = remainingFeatures[1]
       remainingFeatures = remainingFeatures[-1:0]
       
@@ -37,16 +49,13 @@ featuresSelector = function(train, test, currentFeatures, remainingFeatures, tar
   return(h)
 }
 
-featureSelector = function(train, test, base, tries, tar, fracTrain, numTimes){
+featureSelector = function(train, test, base, tries, tar, fracTrain, numTimes, thres = 0){
   totalLogLoss = 0
   scores = hash()
   for(feature in tries){
     scores[[feature]] = 0
   }
   for(i in 1:numTimes){
-    if(i %% 5 == 0){
-      print(i)
-    }
     set.seed = i; idxs =  sample(1:nrow(train))
     startIdx = 1
     midIdx = floor(nrow(train)*fracTrain)
@@ -65,12 +74,10 @@ featureSelector = function(train, test, base, tries, tar, fracTrain, numTimes){
   }
   scores = values(scores)
   sorted = round(10000*sort(scores, decreasing= TRUE))
-  sorted = sorted[sorted > 1]
+  sorted = sorted[sorted >= thres]
   baseLogLoss = round(10000*baseLogLoss)
   bestFeature = names(sorted[1])
-  cat("Top 5: ", "\n", sep="")
-  i = min(length(sorted), 5)
-  print(sorted[1:i])
+  print(sorted)
   cat("Original LogLoss: ", baseLogLoss, " Best Log Loss ", baseLogLoss - sorted[1], " Best feature: ", bestFeature, "\n", sep="")
   currentFeatures = c(base, bestFeature)
   cat("currentFeatures:", "\n", sep="")
@@ -80,4 +87,29 @@ featureSelector = function(train, test, base, tries, tar, fracTrain, numTimes){
   return(sorted)
 }
 
+results = function(df, features, tar, newColName, model, thres=10){
+  waves = unique(df[["wave"]])
+  df[newColName] = 0
+  for(wave in waves){  
+    train = df[df["wave"] != wave,]  
+    test = df[df["wave"] == wave,] 
+    df[df["wave"] == wave,][[newColName]] = getProbs(train, test, features, tar, model)
+  }
+  if(logLoss(df[[tar]], df[[newColName]]) < thres){
+    printMetrics(df[[tar]], df[[newColName]])    
+  }
+  return(df)
+}
 
+
+resultsReg = function(df, features, tar, newColName){
+  waves = unique(df[["wave"]])
+  df[newColName] = 0
+  for(wave in waves){  
+    train = df[df["wave"] != wave,]  
+    test = df[df["wave"] == wave,] 
+    df[df["wave"] == wave,][[newColName]] = getRegs(train, test, features, tar)
+  }
+  print(cor(df[[newColName]], df[[tar]]))
+  return(df)
+}
