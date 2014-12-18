@@ -1,4 +1,3 @@
-source("~/Desktop/speedDating/libraries.R")
 
 source("~/Desktop/speedDating/auxFunctions/corers.R")
 source("~/Desktop/speedDating/auxFunctions/displayers.R")
@@ -16,8 +15,9 @@ source("~/Desktop/speedDating/machineLearning/models.R")
 source("~/Desktop/speedDating/machineLearning/monteCarloTCB.R")
 source("~/Desktop/speedDating/machineLearning/crossValidation.R")
 
-source("~/Desktop/speedDating/machineLearning/recommendationSystem/eventScheduler.R")
-source("~/Desktop/speedDating/machineLearning/recommendationSystem/topNLists.R")
+source("~/Desktop/speedDating/recommendationSystem/eventScheduler.R")
+source("~/Desktop/speedDating/recommendationSystem/topNLists.R")
+
 
 
 
