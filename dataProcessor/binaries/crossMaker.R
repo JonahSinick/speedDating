@@ -4,60 +4,71 @@
 makeCrossHash = function(df, colNames){
   n = names(df)
   crossHash = hash()
-  for(colName in origColNames){
-    crossHash[[paste(colName),"s",sep=""]]
+  for(colName in colNames){
+    crossHash[[colName]] = n[grep(colName,n)]
   }
-  return(crossHash)
+  for(key in keys(crossHash)){
+    otherName = paste(key,"Other",sep="")
+    df[otherName] = 1
+    for(cross in crossHash[[key]]){
+      df[[otherName]] = ifelse(df[[cross]] == 1, 0, df[[otherName]])
+    }
+    crossHash[[key]] = c(crossHash[[key]], otherName)
+  }
+  answer = hash()
+  answer[["crossHash"]] = crossHash
+  answer[["df"]] = df
+  return(answer)
 }
 
 
 makeCrossesAndFreqs = function(df, crossHash){
   for(key in keys(crossHash)){
-    print(key)
-    colNames = c(paste(key,"WomanAvgDecM",sep=""), paste(key,"WomanAvgDecW",sep=""), paste(key,"WomanAvgMatch",sep=""),
-                 c(paste(key,"ManAvgDecM",sep=""), paste(key,"ManAvgDecW",sep=""), paste(key,"ManAvgMatch",sep="")),
-                   paste(key,"CrossAvgDecM",sep=""), paste(key,"CrossAvgDecW",sep=""), paste(key,"CrossAvgMatch",sep=""))
-                 df[colNames] = df[c("avgWaveDecM", "avgWaveDecW", "avgWaveMatch",
-                                     "avgWaveDecM", "avgWaveDecW", "avgWaveMatch",
-                                     "avgWaveDecM","avgWaveDecW" , "avgWaveMatch" )]
-                 vars = crossHash[[key]] 
-                 menVars = vars[grep("M$", vars)]
-                 womenVars = vars[grep("W$", vars)]
-                 decsAndMatch = c("decM", "decW", "match")
-                 for(womanVar in womenVars){
-                   slice = df[df[womanVar] == 1, decsAndMatch]
-                   if(nrow(slice) >= 20){        
-                     df[df[womanVar] == 1,][colNames[1]] = (sum(slice[[1]]) - 1)/(nrow(slice) - 1)
-                     df[df[womanVar] == 1,][colNames[2]] = (sum(slice[[2]]) - 1)/(nrow(slice) - 1)
-                     df[df[womanVar] == 1,][colNames[3]] = (sum(slice[[3]]) - 1)/(nrow(slice) - 1)
-                   }
-                 }
-                 for(manVar in menVars){
-                   slice = df[df[manVar] == 1, decsAndMatch]
-                   if(nrow(slice) >= 20){
-                     df[df[manVar] == 1,][colNames[4]] = (sum(slice[[1]]) - 1)/(nrow(slice) - 1)
-                     df[df[manVar] == 1,][colNames[5]] = (sum(slice[[2]]) - 1)/(nrow(slice) - 1)
-                     df[df[manVar] == 1,][colNames[6]] = (sum(slice[[3]]) - 1)/(nrow(slice) - 1)
-                   }
-                 }
-                 for(manVar in menVars){
-                   for(womanVar in womenVars){
-                     tempColName = paste(manVar,womanVar,sep="_")
-                     newColName = paste(tempColName,"Cross",sep="")
-                     df[newColName] = df[manVar]*df[womanVar]
-                     slice = df[df[manVar] == 1 & df[womanVar] == 1,decsAndMatch]
-                     if(nrow(slice) >= 15){
-                       df[df[manVar] == 1 & df[womanVar] == 1,][colNames[7]] = (sum(slice[[1]]) - 1)/(nrow(slice) - 1)
-                       df[df[manVar] == 1 & df[womanVar] == 1,][colNames[8]] = (sum(slice[[2]]) - 1)/(nrow(slice) - 1)
-                       df[df[manVar] == 1 & df[womanVar] == 1,][colNames[9]] = (sum(slice[[3]]) - 1)/(nrow(slice) - 1)
-                     }
-                   }
-                 }
-  }  
-  probs = n[grep("AvgDec|AvgMatch|decAvg|DecAvg|avgWave", n)]
-  for(prob in probs){
-    lor = gsub("Avg|avg", "LOR", prob)
-    merged[[lor]] = probsToLORs(merged[[prob]])
+    features = crossHash[[key]]
+    mFeatures = gsub("$" ,"M", features)
+    wFeatures = gsub("$" ,"W", features)
+    crossFeatures = c()
+    for(mFeature in mFeatures){
+      for(wFeature in wFeatures){
+        crossName = gsub("$","Cross",paste(mFeature,wFeature,sep=""))     
+        df[crossName] = df[mFeature]*df[wFeature]
+        crossFeatures = c(crossFeatures, crossName)        
+      }
+    }
+    probDecM = paste(key,"ProbDecM",sep="")
+    probDecW = paste(key,"ProbDecW",sep="")
+    df[c(probDecM, probDecW)] = 0
+    for(cross in crossFeatures){
+      print(cross)
+      slice = df[df[cross] == 1,][c("iidM","iidW","decM", "decW")]
+      sDecM = sum(slice[["decM"]])
+      sDecW = sum(slice[["decW"]])
+      for(i in 1:nrow(slice)){
+        iidM = slice[i,"iidM"]
+        iidW = slice[i,"iidW"]
+        iidMs = unique(slice[["iidM"]])
+        iidWs = unique(slice[["iidW"]])
+        if(length(iidMs) >= 5 & length(iidWs) >= 5){
+          iidMs = iidMs[iidMs != iidM]
+          iidWs = iidWs[iidWs != iidW]
+          surIIDM = sample(iidMs, 1)
+          surIIDW = sample(iidWs, 1)
+          smallSlice = slice[slice["iidM"] == iidM | slice["iidW"] == iidW,]
+          sliceSurM = slice[slice["iidM"] == surIIDM,]
+          sliceSurW = slice[slice["iidW"] == surIIDW,]
+          removesDecM = sum(smallSlice[["decM"]])
+          addsDecM = sum(sliceSurM[["decM"]])
+          removesDecW = sum(smallSlice[["decW"]])
+          addsDecW = sum(sliceSurW[["decW"]])
+          df[df["iidM"] == iidM & df["iidW"] == iidW,probDecM] = (sDecM - removesDecM + addsDecM)/(nrow(slice) - nrow(smallSlice) + nrow(sliceSurM))
+          df[df["iidM"] == iidM & df["iidW"] == iidW,probDecW] = (sDecW - removesDecW + addsDecW)/(nrow(slice) - nrow(smallSlice) + nrow(sliceSurW))
+        }
+      }
+    }
+    df[[probDecM]] = ifelse(df[[probDecM]] == 0, 0.48, df[[probDecM]])
+    df[[probDecW]] = ifelse(df[[probDecW]] == 0, 0.33, df[[probDecW]])
+    df[[gsub("Prob","LOR", probDecM)]] = probsToLORs(df[[probDecM]])
+    df[[gsub("Prob","LOR", probDecW)]] = probsToLORs(df[[probDecW]])
   }
   return(df)
 }
