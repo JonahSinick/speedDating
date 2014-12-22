@@ -92,12 +92,26 @@ makeAvgCor = function(df, rating){
     print(c(i,rating))
     iid = df[i,"iid"]
     pid = df[i,"pid"]
+    surPID = df[i,"surPID"]
     slice = df[df["iid"] == iid & df["pid"] != pid,]
-    c = cor(slice[[avg]], slice[["dec"]])  
+    avgs = slice[[avg]]
+    decs = slice[["dec"]]
+    newAvg = df[df["iid"] == iid & df["pid"] == surPID,avg]
+    newDec = df[df["iid"] == iid & df["pid"] == surPID,"dec"]
+    avgs = c(avgs,newAvg)
+    decs = c(decs, newDec)
+    c = cor(avgs, decs)  
     df[i,corStr] = ifelse(is.na(c), 0, c)
-
   }
-  df[paste(corStr,"Cross",sep="")] = df[corStr]*df[avg]
+  corSDStr = paste(rating,"CorSD",sep="")
+  
+  for(i in 1:nrow(df)){
+    df[i,corSDStr] = 1 - length(df[df[corStr] > df[i,corStr],"iid"])/nrow(df)
+    print(df[i,corSDStr])
+  }
+  df[corSDStr] = scale(d[corSDStr])
+  
+  
   return(df)
 }
 
@@ -112,7 +126,9 @@ makeRatingMetrics = function(df){
   for(rating in ratings){
     df = makeRatingSums(df, rating)
     df = makeAvgs(df, rating)
-    df = makeAvgCor(df, rating)
+    if(!(rating %in% c("decRating", "likeRating"))){
+      df = makeAvgCor(df, rating)      
+    }
   }
   return(df)
 }

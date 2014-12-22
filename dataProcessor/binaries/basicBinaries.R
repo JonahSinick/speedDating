@@ -1,4 +1,5 @@
 basicBinaries = function(df){
+  len = ncol(df)
   for(str in c("goal", "date", "race", "goOut", "field_cd", "career_c")){
     codes = unique(df[[str]])
     for(code in codes){
@@ -20,7 +21,7 @@ basicBinaries = function(df){
                                                 "careerArch", "careerPolitics", "careerJourn")
   n = names(df)
   drops = c(n[grep("goOut|date",n)])
-  for(name in n[50:110]){
+  for(name in n[-len:0]){
     slice = df[df[name] == 1,][c("gender", "iid")]
     len1 = length(unique(slice[slice["gender"] == 1,][["iid"]]))
     len2 = length(slice[slice["gender"] == 0,][["iid"]])

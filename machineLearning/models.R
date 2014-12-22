@@ -12,8 +12,8 @@ getProbs = function(train, test, features, tar, model="linear"){
     predictions = predict(rf_fit, test, type="prob")
     probs = predictions[,"1"]  
   }
-  probs = ifelse(probs < 0.01, 0.01, probs)
-  probs = ifelse(probs > 0.99, 0.99, probs)
+  probs = ifelse(probs < 0.0001, 0.0001, probs)
+  probs = ifelse(probs > 0.9999, 0.9999, probs)
   return(probs)
 }
 
