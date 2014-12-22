@@ -36,9 +36,9 @@ uniquesCV = function(df, oldFeatures, newFeature, tar, colName){
       oks = c(oks, unique)
     }
   }
-#   if(round((oldLL - newLL), 4) >= 0){
+  if(round((oldLL - newLL), 4) >= 0){
     print(newFeature)
     cat("Original Log Loss: ", round(oldLL,4), " New Log Loss: ", round(newLL, 4), " Difference: ", round((oldLL - newLL), 4),  " # Goods: ", length(goods), " # Bads: ", length(bads), " # OKs: ", length(oks), "\n", sep="")  
-#   }
+  }
   
 }
